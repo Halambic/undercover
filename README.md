@@ -135,6 +135,22 @@ qui a parlé (✓), qui parle et qui attend ; celui dont c'est le tour apparaît
 grand sous un projecteur qui respire, avec trois points animés ; les indices
 déjà donnés se posent au centre comme des fiches légèrement de travers.
 
+## Couleurs des joueurs
+
+Chaque pseudo donne une teinte par hachage (FNV-1a), stable d'une partie à
+l'autre sans rien stocker. Mais des pseudos proches — « Halambic »,
+« Halambic² », « Halambic3 » — tombaient sur des verts indistinguables, et on
+ne reconnaissait plus personne dans la liste.
+
+La palette écarte donc les teintes trop voisines, **dans l'ordre de la liste** :
+le premier garde la sienne, seul celui qui arrive en collision est décalé. Un
+joueur qui rejoint ne change donc la couleur de personne. L'écart minimal vaut
+42° et se resserre quand le salon se remplit (à 20 joueurs il ne reste que 18°
+par personne de toute façon).
+
+Tout le monde reçoit la même liste dans le même ordre : chaque navigateur
+calcule la même palette, rien ne transite sur le réseau.
+
 ## Rejoindre en cours de partie
 
 Un retardataire n'est plus refusé : il entre comme **spectateur**, voit les

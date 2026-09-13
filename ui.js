@@ -13,7 +13,7 @@ function playerRow(p, o = {}) {
   if (o.turn) row.classList.add('turn');
   if (o.selected) row.classList.add('sel');
   const av = el('span', 'av', (p.name[0] || '?').toUpperCase());
-  av.style.background = avatarColor(p.name);
+  av.style.background = couleurDe(p.name);
   const nm = el('span', 'nm', p.name + (p.id === V.me ? ' (toi)' : ''));
   row.append(av, nm);
   if (p.pending) row.append(el('span', 'badge b-wait', 'prochaine manche'));
@@ -100,6 +100,7 @@ function sonsDeTransition(v) {
 function render() {
   if (!V) return;
   sonsDeTransition(V);
+  majPalette(V.players.map(p => p.name));   // couleurs distinctes avant tout tracé
 
   if (V.reste == null) { finLocale = null; }
   else { finLocale = performance.now() + V.reste; dureeTotale = (V.minuteur || 0) * 1000 || V.reste; }
@@ -324,7 +325,7 @@ function renderStage() {
       const st = k < V.turn ? 'done' : k === V.turn ? 'now' : 'next';
       const node = el('div', 'trk ' + st);
       const av = el('span', 'av', st === 'done' ? '✓' : (p.name[0] || '?').toUpperCase());
-      if (st !== 'done') av.style.background = avatarColor(p.name);
+      if (st !== 'done') av.style.background = couleurDe(p.name);
       node.append(av, el('span', 'nm', p.name));
       track.append(node);
     });
@@ -344,7 +345,7 @@ function renderStage() {
     } else {
       const spot = el('div', 'spot');
       const av = el('div', 'bigav', (cur ? cur.name[0] || '?' : '?').toUpperCase());
-      if (cur) av.style.background = avatarColor(cur.name);
+      if (cur) av.style.background = couleurDe(cur.name);
       const dots = el('div', 'dots');
       dots.append(el('i'), el('i'), el('i'));
       spot.append(av, dots);

@@ -41,11 +41,49 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 
 /* Teinte stable tirée du pseudo (FNV-1a) : chacun garde sa couleur d'une
    partie à l'autre, sans qu'on ait à la stocker. */
-function avatarColor(name) {
+function teinteDe(name) {
   let h = 2166136261;
   for (const c of name) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
-  return `hsl(${Math.abs(h) % 360},68%,66%)`;
+  return Math.abs(h) % 360;
 }
+const couleurHsl = t => `hsl(${t},68%,66%)`;
+const avatarColor = name => couleurHsl(teinteDe(name));
+
+/* ---------- palette d'une partie ----------
+   La teinte seule ne suffit pas : « Halambic », « Halambic² » et « Halambic3 »
+   se ressemblent assez pour tomber sur des verts indistinguables, et on ne
+   reconnaît plus personne d'un coup d'œil. On écarte donc les teintes trop
+   proches, dans l'ordre de la liste : le premier arrivé garde la sienne, seul
+   celui qui arrive en collision est décalé. Les joueurs déjà là ne changent
+   pas de couleur quand quelqu'un rejoint.
+
+   Tout le monde reçoit la même liste dans le même ordre, donc tout le monde
+   calcule la même palette — rien ne transite sur le réseau. */
+let PALETTE = new Map(), clePalette = null;
+
+const ecartTeinte = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+
+function majPalette(noms) {
+  const cle = noms.join('\u0000');
+  if (cle === clePalette) return PALETTE;
+  clePalette = cle;
+  /* Écart minimal : large à quelques joueurs, resserré quand le salon se
+     remplit — à 20 joueurs il ne reste que 18° par personne de toute façon. */
+  const mini = Math.min(42, 340 / Math.max(1, noms.length));
+  const prises = [];
+  PALETTE = new Map();
+  noms.forEach(nom => {
+    let t = teinteDe(nom);
+    for (let k = 0; k < 360 && prises.some(p => ecartTeinte(p, t) < mini); k++) t = (t + 1) % 360;
+    prises.push(t);
+    PALETTE.set(nom, couleurHsl(t));
+  });
+  return PALETTE;
+}
+
+/* Couleur à afficher pour un joueur. Retombe sur la teinte brute si la palette
+   n'a pas encore été calculée (écran d'accueil, par exemple). */
+const couleurDe = nom => PALETTE.get(nom) || avatarColor(nom);
 
 /* ---------- messages à l'écran ---------- */
 let toastT;
