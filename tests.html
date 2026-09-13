@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Undercover — tests</title>
+<style>
+:root{--ok:#48b183;--ko:#d8483c;--dim:#8a91a3;--line:#2b3140}
+body{margin:0;padding:26px 18px 60px;background:#0a0b0f;color:#e7e9ef;
+  font:14px/1.6 ui-monospace,Menlo,Consolas,monospace}
+main{max-width:860px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
+.sub{color:var(--dim);margin:0 0 22px;font-size:13px}
+.bilan{border:1px solid var(--line);border-radius:4px;padding:14px 16px;margin-bottom:20px;font-size:16px}
+.bilan.ok{border-color:var(--ok)} .bilan.ko{border-color:var(--ko)}
+.grp{margin:20px 0 6px;color:var(--dim);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  border-bottom:1px dashed var(--line);padding-bottom:5px}
+.t{display:flex;gap:10px;padding:3px 0;align-items:baseline}
+.t .s{flex:none;width:16px}
+.t.ok .s{color:var(--ok)} .t.ko .s{color:var(--ko)}
+.t.ko{color:var(--ko)}
+.det{color:var(--dim);font-size:12px;margin-left:26px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Undercover — tests des règles</h1>
+  <p class="sub">Vérifie <code>rules.js</code> sans ouvrir de salon ni de réseau. Recharge la page pour rejouer.</p>
+  <div id="bilan" class="bilan">exécution…</div>
+  <div id="sortie"></div>
+</main>
+
+<script src="words.js?v=3"></script>
+<script src="rules.js?v=7"></script>
+<script>
+/* ---------- micro-harnais ---------- */
+const R = window.UC_RULES;
+let passes = 0, echecs = 0;
+const sortie = document.getElementById('sortie');
+
+function groupe(titre) {
+  const d = document.createElement('div'); d.className = 'grp'; d.textContent = titre; sortie.append(d);
+}
+function verifie(nom, condition, detail) {
+  const ok = !!condition;
+  ok ? passes++ : echecs++;
+  const l = document.createElement('div'); l.className = 't ' + (ok ? 'ok' : 'ko');
+  const s = document.createElement('span'); s.className = 's'; s.textContent = ok ? '✓' : '✕';
+  const t = document.createElement('span'); t.textContent = nom;
+  l.append(s, t); sortie.append(l);
+  if (!ok && detail !== undefined) {
+    const d = document.createElement('div'); d.className = 'det';
+    d.textContent = 'obtenu : ' + JSON.stringify(detail);
+    sortie.append(d);
+  }
+}
+/* générateur déterministe : les tests ne doivent jamais dépendre du hasard */
+function rnd(seed) { let x = seed; return () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648; }
+const joueurs = (...roles) => roles.map((role, i) => ({ id: 'p' + i, role, connected: true, alive: true }));
+
+/* ================= configuration ================= */
+groupe('Configuration');
+verifie('3 joueurs minimum', R.cfgError(2, { under: 1, white: 0 }, 100) !== null);
+verifie('3 joueurs suffisent', R.cfgError(3, { under: 1, white: 0 }, 100) === null,
+        R.cfgError(3, { under: 1, white: 0 }, 100));
+verifie('au moins un imposteur exigé', R.cfgError(5, { under: 0, white: 0 }, 100) !== null);
+verifie('civils devant les imposteurs', R.cfgError(4, { under: 2, white: 0 }, 100) !== null);
+verifie('3 imposteurs sur 8 : accepté', R.cfgError(8, { under: 2, white: 1 }, 100) === null);
+verifie('aucune catégorie : refusé', R.cfgError(5, { under: 1, white: 0 }, 0) !== null);
+verifie('conseil ~1 imposteur pour 4', R.cfgAdvice(8, { under: 2, white: 0 }) === null,
+        R.cfgAdvice(8, { under: 2, white: 0 }));
+verifie('conseil affiché si écart', typeof R.cfgAdvice(12, { under: 1, white: 0 }) === 'string');
+
+/* ================= molettes de réglage ================= */
+groupe('Molettes − / +');
+{
+  const c = { under: 1, white: 0, tClue: 0, tDebate: 0, tVote: 0 };
+  verifie('« + » augmente', R.stepCfg(c, 'under', 1) === 2, R.stepCfg(c, 'under', 1));
+  verifie('« − » DIMINUE', R.stepCfg(c, 'under', -1) === 0, R.stepCfg(c, 'under', -1));
+  verifie('pas en dessous de zéro', R.stepCfg({ under: 0 }, 'under', -1) === 0);
+  verifie('pas au-dessus du dernier palier', R.stepCfg({ under: 8 }, 'under', 1) === 8);
+
+  verifie('minuteur : premier cran', R.stepCfg({ tClue: 0 }, 'tClue', 1) === 15, R.stepCfg({ tClue: 0 }, 'tClue', 1));
+  verifie('minuteur : « − » redescend', R.stepCfg({ tClue: 30 }, 'tClue', -1) === 20, R.stepCfg({ tClue: 30 }, 'tClue', -1));
+  verifie('minuteur : « − » depuis le max redescend', R.stepCfg({ tClue: 90 }, 'tClue', -1) === 60,
+          R.stepCfg({ tClue: 90 }, 'tClue', -1));
+  verifie('minuteur : plafond respecté', R.stepCfg({ tClue: 90 }, 'tClue', 1) === 90);
+  verifie('minuteur : retour à « aucun »', R.stepCfg({ tVote: 20 }, 'tVote', -1) === 0);
+  verifie('discussion : paliers propres', R.stepCfg({ tDebate: 60 }, 'tDebate', 1) === 90);
+  verifie('clé inconnue : valeur inchangée', R.stepCfg({ zzz: 5 }, 'zzz', 1) === 5);
+
+  /* un aller-retour complet doit revenir au point de départ */
+  let v = { tClue: 0 };
+  for (let i = 0; i < 6; i++) v.tClue = R.stepCfg(v, 'tClue', 1);
+  const haut = v.tClue;
+  for (let i = 0; i < 6; i++) v.tClue = R.stepCfg(v, 'tClue', -1);
+  verifie('aller-retour : on revient à zéro', haut === 90 && v.tClue === 0, haut + ' puis ' + v.tClue);
+}
+
+/* ================= rôles ================= */
+groupe('Distribution des rôles');
+{
+  const r = R.assignRoles(9, { under: 2, white: 1 }, rnd(7));
+  verifie('un rôle par joueur', r.length === 9, r);
+  verifie('2 undercover', r.filter(x => x === 'under').length === 2, r);
+  verifie('1 Mr White', r.filter(x => x === 'white').length === 1, r);
+  verifie('6 civils', r.filter(x => x === 'civil').length === 6, r);
+  const a = R.assignRoles(9, { under: 2, white: 1 }, rnd(1)).join();
+  const b = R.assignRoles(9, { under: 2, white: 1 }, rnd(2)).join();
+  verifie('la répartition varie', a !== b);
+}
+
+/* ================= ordre de parole ================= */
+groupe('Ordre de parole');
+{
+  const ps = joueurs('under', 'civil', 'civil', 'white');
+  const o = R.speakOrder(ps, false, rnd(3));
+  verifie('tout le monde parle une fois', o.length === 4 && new Set(o).size === 4, o);
+  let civilEnTete = 0;
+  for (let s = 1; s <= 40; s++) {
+    const ord = R.speakOrder(ps, true, rnd(s));
+    if (ps.find(p => p.id === ord[0]).role === 'civil') civilEnTete++;
+  }
+  verifie('option « un civil ouvre » : toujours respectée', civilEnTete === 40, civilEnTete + '/40');
+  let premiers = new Set();
+  for (let s = 1; s <= 40; s++) premiers.add(R.speakOrder(ps, false, rnd(s))[0]);
+  verifie('sans l’option, l’ordre est bien tiré au sort', premiers.size > 1, [...premiers]);
+}
+
+/* ================= vote ================= */
+groupe('Dépouillement');
+{
+  const v = [{ id: 'a', voted: 'c' }, { id: 'b', voted: 'c' }, { id: 'c', voted: 'a' }];
+  const r = R.tallyVotes(v);
+  verifie('majorité désignée', r.top.length === 1 && r.top[0] === 'c', r);
+  verifie('pas d’égalité', r.tie === false);
+  verifie('comptes triés', r.tally[0].n === 2, r.tally);
+}
+{
+  const r = R.tallyVotes([{ id: 'a', voted: 'b' }, { id: 'b', voted: 'a' }]);
+  verifie('égalité détectée', r.tie === true && r.top.length === 2, r);
+}
+{
+  const r = R.tallyVotes([{ id: 'a', voted: null }, { id: 'b', voted: null }]);
+  verifie('aucun vote : pas de victime', r.top.length === 0, r);
+  verifie('aucun vote : pas signalé comme égalité', r.tie === false, r);
+}
+{
+  const r = R.tallyVotes([]);
+  verifie('aucun votant : dépouillement vide', r.top.length === 0 && r.tally.length === 0, r);
+}
+
+/* ================= conditions de victoire ================= */
+groupe('Fin de partie (règles Yanstar)');
+verifie('tous les infiltrés éliminés → civils',
+        R.outcome(joueurs('civil', 'civil', 'civil')) === 'civils');
+verifie('1 civil restant → imposteurs',
+        R.outcome(joueurs('civil', 'under')) === 'imposteurs');
+verifie('2 civils contre 2 imposteurs : la partie continue',
+        R.outcome(joueurs('civil', 'civil', 'under', 'white')) === null,
+        R.outcome(joueurs('civil', 'civil', 'under', 'white')));
+verifie('3 civils contre 1 undercover : la partie continue',
+        R.outcome(joueurs('civil', 'civil', 'civil', 'under')) === null);
+verifie('1 civil face à 2 imposteurs → imposteurs',
+        R.outcome(joueurs('civil', 'under', 'white')) === 'imposteurs');
+
+/* ================= barème ================= */
+groupe('Barème (2 / 6 / 10)');
+{
+  const ps = joueurs('civil', 'civil', 'under', 'white');
+  const g1 = R.awardScores('civils', ps);
+  verifie('civils : 2 points chacun', g1.p0 === 2 && g1.p1 === 2, g1);
+  verifie('imposteurs : rien', g1.p2 === undefined && g1.p3 === undefined, g1);
+  const g2 = R.awardScores('imposteurs', ps);
+  verifie('undercover : 10 points', g2.p2 === 10, g2);
+  verifie('Mr White : 6 points', g2.p3 === 6, g2);
+  const g3 = R.awardScores('white', ps, 'p3');
+  verifie('Mr White qui devine : 6 points, seul', g3.p3 === 6 && Object.keys(g3).length === 1, g3);
+}
+
+/* ================= devinette de Mr White ================= */
+groupe('Devinette de Mr White');
+verifie('exact', R.guessOk('Avocat', 'Avocat'));
+verifie('casse ignorée', R.guessOk('AVOCAT', 'Avocat'));
+verifie('accents ignorés', R.guessOk('cafe', 'Café'));
+verifie('espaces ignorés', R.guessOk('  pain au chocolat ', 'Pain au chocolat'));
+verifie('trait d’union ignoré', R.guessOk('hotdog', 'Hot-dog'));
+verifie('mot faux refusé', !R.guessOk('Juge', 'Avocat'));
+verifie('réponse vide refusée', !R.guessOk('   ', 'Avocat'));
+
+/* ================= banque de mots ================= */
+groupe('Banque de mots');
+{
+  const W = window.UC_WORDS || [];
+  verifie('banque chargée', W.length > 20000, W.length);
+  verifie('aucune paire en double', new Set(W.map(w => w.key)).size === W.length);
+  verifie('aucun mot identique des deux côtés', W.every(w => w.a.toLowerCase() !== w.b.toLowerCase()));
+  verifie('toutes les paires ont une catégorie', W.every(w => w.cat && w.cat.length));
+  const cats = new Set(W.map(w => w.cat));
+  verifie('plus de 150 catégories', cats.size > 150, cats.size);
+  verifie('une icône par catégorie',
+          [...cats].every(c => window.UC_ICONS && window.UC_ICONS[c]),
+          [...cats].filter(c => !(window.UC_ICONS || {})[c]));
+
+  const cfg = { hard: false, off: [] };
+  verifie('les paires difficiles sont exclues par défaut',
+          R.poolFor(W, cfg).every(w => !w.hard));
+  verifie('elles reviennent en mode difficile',
+          R.poolFor(W, { hard: true, off: [] }).length > R.poolFor(W, cfg).length);
+  const cible = 'Animaux';
+  verifie('le filtre de catégories s’applique',
+          R.poolFor(W, { hard: false, off: [...cats].filter(c => c !== cible) })
+           .every(w => w.cat === cible));
+
+  /* 500 tirages : aucune répétition tant que la banque n’est pas épuisée */
+  let used = [], doublons = 0;
+  const vus = new Set();
+  for (let i = 0; i < 500; i++) {
+    const r = R.pickPair(W, used, cfg, rnd(i + 11));
+    if (vus.has(r.pair.civil + '|' + r.pair.under) || vus.has(r.pair.under + '|' + r.pair.civil)) doublons++;
+    vus.add(r.pair.civil + '|' + r.pair.under);
+    used = r.used;
+  }
+  verifie('500 tirages sans répétition', doublons === 0, doublons);
+  verifie('l’historique suit les tirages', used.length === 500, used.length);
+
+  /* banque épuisée : on recycle au lieu de bloquer */
+  const mini = [{ a: 'X', b: 'Y', cat: 'T', hard: false, key: 'x|y' }];
+  const r1 = R.pickPair(mini, ['x|y'], { hard: false, off: [] }, rnd(5));
+  verifie('banque épuisée : recyclage', r1 && r1.recycle === true, r1);
+  verifie('catégorie vide : aucun tirage possible',
+          R.pickPair(W, [], { hard: false, off: [...cats] }, rnd(5)) === null);
+
+  /* le mot principal change de camp */
+  let sensA = 0;
+  for (let i = 0; i < 60; i++) {
+    const r = R.pickPair(mini, [], { hard: false, off: [] }, rnd(i + 1));
+    if (r.pair.civil === 'X') sensA++;
+  }
+  verifie('le mot principal change de camp', sensA > 5 && sensA < 55, sensA + '/60');
+}
+
+/* ================= moteur : parties complètes ================= */
+/* On rejoue de vraies parties sur le moteur, sans navigateur ni réseau. */
+groupe('Moteur — déroulé d\'une partie');
+
+function partie(roles, cfg = {}) {
+  const e = {
+    phase: 'lobby', round: 0, turn: 0, order: [], clues: [], chat: [], log: [],
+    cfg: Object.assign({ under: 1, white: 0, whiteGuess: true, civilFirst: false,
+                         tClue: 0, tDebate: 0, tVote: 0, showCat: false }, cfg),
+    players: roles.map((role, i) => ({
+      id: 'p' + i, name: 'J' + i, role, word: role === 'white' ? null : (role === 'under' ? 'B' : 'A'),
+      alive: true, connected: true, score: 0, voted: null, revealed: false,
+    })),
+    pair: { civil: 'A', under: 'B', cat: 'T' },
+  };
+  return e;
+}
+const voterTous = (e, cible) => R.vivants(e).forEach(p => {
+  p.voted = (p.id === cible) ? R.vivants(e).find(x => x.id !== cible).id : cible;
+});
+
+{
+  /* 4 joueurs, 1 undercover : les civils l'éliminent au premier vote */
+  const e = partie(['civil', 'civil', 'civil', 'under']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  verifie('la manche démarre en phase indices', e.phase === 'clue', e.phase);
+  verifie('tout le monde parle', e.order.length === 4, e.order);
+
+  e.turn = e.order.length;                       // tout le monde a parlé
+  R.avancer(e, 0);
+  verifie('après les indices vient la discussion', e.phase === 'debate', e.phase);
+
+  e.phase = 'vote'; e.players.forEach(p => p.voted = null);
+  voterTous(e, 'p3');
+  R.avancer(e, 0);
+  verifie('le vote élimine l\'undercover', e.phase === 'reveal' && e.elim.id === 'p3', e.elim);
+  verifie('son rôle est révélé', R.parId(e, 'p3').revealed === true);
+
+  const suite = R.apresElimination(e);
+  verifie('plus d\'infiltré : les civils gagnent', suite === 'end' && e.result.winner === 'civils', e.result);
+  verifie('2 points par civil', R.parId(e, 'p0').score === 2 && R.parId(e, 'p3').score === 0);
+}
+
+{
+  /* 3 civils + 2 infiltrés : à 2 contre 2 la partie continue (règle officielle),
+     elle ne bascule qu'au moment où il ne reste qu'un seul civil. */
+  const e = partie(['civil', 'civil', 'civil', 'under', 'white'], { under: 1, white: 1 });
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  R.parId(e, 'p0').alive = false;                // premier civil éliminé → 2 civils / 2 infiltrés
+  e.elim = { id: 'p0', role: 'civil' }; e.phase = 'reveal';
+  verifie('2 civils contre 2 : ça continue', R.apresElimination(e) === 'manche', e.phase);
+  verifie('nouvelle manche en phase indices', e.phase === 'clue' && e.round === 2, e.round);
+  verifie('l\'ordre ne compte que les vivants', e.order.length === 4, e.order.length);
+
+  R.parId(e, 'p1').alive = false;                // deuxième civil → il n'en reste qu'un
+  e.elim = { id: 'p1', role: 'civil' }; e.phase = 'reveal';
+  verifie('1 civil restant : les infiltrés gagnent',
+          R.apresElimination(e) === 'end' && e.result.winner === 'imposteurs', e.result);
+  verifie('undercover 10, Mr White 6',
+          R.parId(e, 'p3').score === 10 && R.parId(e, 'p4').score === 6,
+          R.parId(e, 'p3').score + '/' + R.parId(e, 'p4').score);
+  verifie('les civils ne marquent rien', R.parId(e, 'p2').score === 0);
+}
+
+{
+  /* Mr White éliminé : passage par la devinette */
+  const e = partie(['civil', 'civil', 'civil', 'white'], { under: 0, white: 1 });
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.phase = 'vote'; voterTous(e, 'p3'); R.avancer(e, 0);
+  verifie('Mr White est éliminé', e.elim.role === 'white', e.elim);
+  verifie('on passe à la devinette', R.apresElimination(e) === 'guess' && e.phase === 'guess', e.phase);
+  R.terminer(e, 'white', 'p3');
+  verifie('devinette juste : il gagne seul', e.result.winner === 'white' && R.parId(e, 'p3').score === 6);
+
+  /* si l'option est coupée, on enchaîne directement */
+  const e2 = partie(['civil', 'civil', 'civil', 'white'], { under: 0, white: 1, whiteGuess: false });
+  R.demarrerManche(e2, { pair: e2.pair, roles: e2.players.map(p => p.role) });
+  R.parId(e2, 'p3').alive = false;
+  e2.elim = { id: 'p3', role: 'white' }; e2.phase = 'reveal';
+  verifie('option coupée : pas de devinette',
+          R.apresElimination(e2) === 'end' && e2.result.winner === 'civils', e2.result);
+}
+
+groupe('Moteur — cas tordus');
+{
+  /* un joueur déconnecté ne doit pas bloquer le tour de parole */
+  const e = partie(['civil', 'civil', 'civil', 'under']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  R.parId(e, e.order[0]).connected = false;
+  R.avancer(e, 0);
+  verifie('le joueur absent est sauté', e.turn === 1, e.turn);
+  e.order.forEach(id => { R.parId(e, id).connected = false; });
+  R.avancer(e, 0);
+  verifie('tous absents : on passe à la discussion', e.phase === 'debate', e.phase);
+}
+{
+  /* égalité, puis deuxième égalité : personne n'est éliminé */
+  const e = partie(['civil', 'civil', 'under', 'white']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.phase = 'vote';
+  R.parId(e, 'p0').voted = 'p2'; R.parId(e, 'p1').voted = 'p2';
+  R.parId(e, 'p2').voted = 'p0'; R.parId(e, 'p3').voted = 'p0';
+  R.avancer(e, 0);
+  verifie('égalité : on revote', e.phase === 'vote' && e.tie.length === 2, e.tie);
+  verifie('les votes sont remis à zéro', R.vivants(e).every(p => !p.voted));
+  R.parId(e, 'p0').voted = 'p2'; R.parId(e, 'p1').voted = 'p2';
+  R.parId(e, 'p2').voted = 'p0'; R.parId(e, 'p3').voted = 'p0';
+  R.avancer(e, 0);
+  verifie('deuxième égalité : personne ne saute', e.phase === 'reveal' && e.elim === null, e.elim);
+}
+{
+  /* personne ne vote : le minuteur débloque au lieu de figer */
+  const e = partie(['civil', 'civil', 'civil', 'under'], { tVote: 30 });
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.phase = 'vote'; e.players.forEach(p => p.voted = null);
+  R.armer(e, 1000);
+  verifie('échéance posée', e.deadline === 31000, e.deadline);
+  verifie('avant l\'heure : rien ne bouge', R.echeance(e, 20000) === false && e.phase === 'vote');
+  verifie('à l\'échéance : on dépouille', R.echeance(e, 31001) === true && e.phase === 'reveal', e.phase);
+  verifie('aucun vote : personne n\'est éliminé', e.elim === null);
+}
+{
+  /* le minuteur d'indice enchaîne les tours sans se perdre */
+  const e = partie(['civil', 'civil', 'civil', 'under'], { tClue: 15 });
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  R.armer(e, 0);
+  let t = 0;
+  for (let i = 0; i < 4; i++) { t += 15001; R.echeance(e, t); }
+  verifie('quatre tours passés : place à la discussion', e.phase === 'debate', e.phase + ' tour ' + e.turn);
+  verifie('une échéance a bien été reposée à chaque tour', e.deadline === null || e.deadline > t,
+          e.deadline);
+}
+{
+  /* un retardataire n'entre pas dans l'ordre de parole */
+  const e = partie(['civil', 'civil', 'civil', 'under']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.players.push({ id: 'tard', name: 'Tardif', role: null, alive: false, pending: true,
+                   connected: true, score: 0, voted: null, revealed: false });
+  R.avancer(e, 0);
+  verifie('le spectateur reste hors du tour', e.order.length === 4 && !e.order.includes('tard'), e.order);
+  verifie('il ne compte pas pour la victoire', R.outcome(R.vivants(e)) === null);
+  /* manche suivante de la MÊME partie : c'est le cas qui compte, un nouveau
+     tirage n'aurait rien prouvé. */
+  R.demarrerManche(e);
+  const t = R.parId(e, 'tard');
+  verifie('manche suivante : il entre en jeu', e.order.includes('tard') && !t.pending, e.order);
+  verifie('il entre comme civil', t.role === 'civil', t.role);
+  verifie('avec le mot des civils', t.word === e.pair.civil, t.word);
+  verifie('son entrée est annoncée', e.log.join(' ').includes('Tardif entre en jeu'), e.log);
+  verifie('il ne renverse pas la majorité civile', R.outcome(R.vivants(e)) === null);
+}
+
+groupe('Minuteur du départage');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  e.cfg.tVote = 60;
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.phase = 'vote'; R.armer(e, 1000);
+  verifie('vote armé à 60 s', e.deadline === 61000, e.deadline);
+  e.players[0].voted = 'p1'; e.players[1].voted = 'p0';
+  e.players[2].voted = 'p1'; e.players[3].voted = 'p0';
+  R.avancer(e, 30000);                       // tous ont voté au bout de 30 s
+  verifie('égalité détectée', !!e.tie, e.tie);
+  verifie('toujours en vote', e.phase === 'vote', e.phase);
+  verifie('le départage repart sur 60 s pleines', e.deadline === 90000,
+          'reste ' + (e.deadline - 30000) / 1000 + ' s');
+}
+
+groupe('Manche avortée');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  e.cfg.showCat = true;
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  R.interrompre(e, 'test');
+  verifie('le mot de la manche avortée est effacé', e.pair === null, e.pair);
+  verifie('sa catégorie ne fuit plus dans le salon',
+          R.projeter(e, 'p0').pair === null, R.projeter(e, 'p0').pair);
+}
+
+groupe('Effectif insuffisant');
+{
+  const e = partie(['civil', 'civil', 'civil', 'under']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  verifie('quatre présents : jouable', R.partieInjouable(e) === false);
+  R.parId(e, 'p1').connected = false;
+  R.parId(e, 'p2').connected = false;
+  verifie('deux présents : encore jouable', R.partieInjouable(e) === false, R.joueursEnJeu(e));
+  R.parId(e, 'p3').connected = false;
+  verifie('un seul présent : injouable', R.partieInjouable(e) === true, R.joueursEnJeu(e));
+  verifie('un éliminé connecté ne compte pas',
+          (R.parId(e, 'p1').connected = true, R.parId(e, 'p1').alive = false, R.partieInjouable(e)) === true);
+
+  /* interruption : on garde les joueurs et les scores, on efface la manche */
+  e.players.forEach(p => p.score = 5);
+  e.clues.push({ round: 1, id: 'p0', text: 'x' });
+  R.interrompre(e, 'Plus assez de joueurs.');
+  verifie('retour au salon', e.phase === 'lobby', e.phase);
+  verifie('les joueurs restent', e.players.length === 4);
+  verifie('les scores sont conservés', e.players.every(p => p.score === 5));
+  verifie('les rôles sont effacés', e.players.every(p => p.role === null));
+  verifie('tout le monde redevient jouable', e.players.every(p => p.alive && !p.pending));
+  verifie('les indices sont effacés', e.clues.length === 0);
+  verifie('la raison est journalisée', e.log.join(' ').includes('Plus assez'), e.log);
+  verifie('rien à interrompre dans le salon', R.partieInjouable(e) === false);
+}
+
+groupe('Scrutin détaillé');
+{
+  const e = partie(['civil', 'civil', 'civil', 'under']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  e.phase = 'vote';
+  R.parId(e, 'p0').voted = 'p3'; R.parId(e, 'p1').voted = 'p3';
+  R.parId(e, 'p2').voted = 'p0'; R.parId(e, 'p3').voted = null;   // un joueur s'abstient
+  verifie('une abstention n\'arrête pas le vote', (R.avancer(e, 0), e.phase) === 'vote', e.phase);
+  R.depouiller(e);                                // comme le fait le minuteur ou l'hôte
+  verifie('le détail du scrutin est conservé', e.lastVotes.length === 4, e.lastVotes);
+  const v = R.projeter(e, 'p0').votes;
+  verifie('les votes sont nommés', v.find(x => x.de === 'J0').vers === 'J3', v);
+  verifie('l\'abstention est marquée', v.find(x => x.de === 'J3').vers === null, v);
+  verifie('capturé avant toute remise à zéro', v.filter(x => x.vers).length === 3, v);
+
+  /* pendant le vote, le détail ne doit pas fuiter : on ne saurait plus bluffer */
+  const enCours = partie(['civil', 'civil', 'under']);
+  enCours.phase = 'vote'; enCours.lastVotes = [{ de: 'p0', vers: 'p2' }];
+  verifie('rien n\'est visible pendant le vote', R.projeter(enCours, 'p1').votes === null);
+}
+
+/* ================= étanchéité des vues ================= */
+/* Reproduit la logique de viewFor() : un joueur ne doit jamais recevoir le rôle
+   d'un autre tant que celui-ci n'est pas révélé ou la partie terminée. */
+groupe('Étanchéité (aucune fuite de rôle)');
+{
+  const vueDe = (moi, joueurs, phase) => joueurs.map(p => ({
+    nom: p.name,
+    role: (phase === 'end' || p.revealed || p.id === moi) ? p.role : null,
+  }));
+  const js = [
+    { id: 'a', name: 'A', role: 'civil', revealed: false },
+    { id: 'b', name: 'B', role: 'under', revealed: false },
+    { id: 'c', name: 'C', role: 'white', revealed: false },
+  ];
+  for (const phase of ['clue', 'debate', 'vote', 'reveal', 'guess']) {
+    const vue = vueDe('a', js, phase);
+    const fuite = vue.filter(v => v.nom !== 'A' && v.role !== null);
+    verifie('phase ' + phase + ' : rien ne fuite', fuite.length === 0, fuite);
+    verifie('phase ' + phase + ' : je vois mon propre rôle', vue[0].role === 'civil');
+  }
+  const elimine = js.map(p => p.id === 'b' ? { ...p, revealed: true } : p);
+  const v2 = vueDe('a', elimine, 'reveal');
+  verifie('un éliminé est révélé à tous', v2[1].role === 'under', v2);
+  verifie('les vivants restent couverts', v2[2].role === null, v2);
+  const fin = vueDe('a', js, 'end');
+  verifie('fin de partie : tout est dévoilé', fin.every(v => v.role !== null), fin);
+}
+
+/* ---------- bilan ---------- */
+const b = document.getElementById('bilan');
+b.className = 'bilan ' + (echecs ? 'ko' : 'ok');
+b.textContent = echecs
+  ? `${echecs} test${echecs > 1 ? 's' : ''} en échec sur ${passes + echecs}.`
+  : `${passes} tests passés, aucun échec.`;
+</script>
+</body>
+</html>

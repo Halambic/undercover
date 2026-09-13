@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undercover — en ligne</title>
+<meta name="description" content="Undercover en ligne : chacun sur son écran, un code de salon à partager. Sans inscription, sans serveur.">
+
+<!-- Icônes -->
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0a0b0f">
+
+<!-- Aperçu du lien (Discord, WhatsApp, Slack, Twitter…).
+     Les chemins sont relatifs : les robots les résolvent depuis l'adresse de la
+     page. Si un service refuse l'aperçu, remplace-les par des URL absolues
+     (https://ton-compte.github.io/ton-repo/og.jpg). -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Undercover">
+<meta property="og:title" content="Undercover — le jeu de l'imposteur, en ligne">
+<meta property="og:description" content="Tout le monde reçoit le même mot, sauf les Undercover et Mr White. Un code de salon à partager, chacun sur son écran. Sans inscription.">
+<meta property="og:image" content="og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Trois silhouettes en file d'identification sous un projecteur, celle du milieu portant un chapeau et une barre de censure sur les yeux.">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Undercover — le jeu de l'imposteur, en ligne">
+<meta name="twitter:description" content="Un code de salon à partager, chacun sur son écran. Sans inscription, sans serveur.">
+<meta name="twitter:image" content="og.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+
+<!-- ================= ACCUEIL ================= -->
+<main id="home">
+  <div class="homebox">
+    <div class="logo">Under<span>cover</span></div>
+    <div class="logo-sub">Dossier · Enquête · Trahison</div>
+    <div class="art art-hero" id="artHero"></div>
+
+    <div class="panel">
+      <label class="tt" for="nameInput">Ton pseudo</label>
+      <input class="inp mt" id="nameInput" maxlength="14" placeholder="Ex : Marie" autocomplete="nickname">
+      <button class="btn mt2" id="btnCreate">Créer un salon</button>
+      <div class="sep"></div>
+      <label class="tt" for="codeInput">Rejoindre un salon</label>
+      <input class="inp code mt" id="codeInput" maxlength="4" placeholder="CODE" autocomplete="off"
+             autocapitalize="characters" spellcheck="false">
+      <button class="btn ghost mt" id="btnJoin">Rejoindre</button>
+      <div class="mini mt" id="homeMsg" style="text-align:center;min-height:18px"></div>
+    </div>
+
+    <div class="panel mt" id="reprise" hidden>
+      <div class="hd"><span class="tt">Partie interrompue</span></div>
+      <p class="mini" id="repriseTxt" style="margin:0 0 10px"></p>
+      <button class="btn sm" id="btnReprendre">Reprendre le dossier</button>
+      <button class="link mt" id="btnOublier">abandonner cette partie</button>
+    </div>
+
+    <div class="panel mt">
+      <div class="hd"><span class="tt">Comment ça marche</span></div>
+      <p class="mini" style="margin:0">
+        Tout le monde reçoit le même mot — sauf les <b style="color:var(--under)">Undercover</b>, qui en ont un
+        très proche, et <b style="color:var(--white)">Mr White</b>, qui n'en a aucun. Chacun donne un indice d'un
+        seul mot, puis on vote. Les civils doivent éliminer les imposteurs avant d'être submergés.
+      </p>
+    </div>
+
+  </div>
+</main>
+
+<!-- ================= JEU ================= -->
+<div id="game">
+  <!-- colonne gauche : salon + joueurs -->
+  <div class="col left">
+    <div class="panel">
+      <div class="hd"><span class="tt">Salon</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <button class="sonbtn" id="btnSon" title="Couper le son" aria-label="Couper le son">♪</button>
+          <span class="status"><span class="dot" id="netDot"></span><span id="netTxt">connecté</span></span>
+        </span></div>
+      <div class="codebox"><b id="roomCode" aria-label="Code du salon">----</b><button class="btn ghost sm" id="btnCopy" aria-label="Copier le lien d'invitation">Copier</button></div>
+      <div class="mini mt" id="hostNote"></div>
+      <button class="link" id="btnLeave">quitter le salon</button>
+      <div class="relance" id="relance" hidden>
+        <div class="mini">L'hôte ne répond plus. Tu peux relancer le salon sous le même code — la manche en cours sera perdue, les scores non.</div>
+        <button class="btn ghost sm mt" id="btnRelance">Reprendre la main</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="hd"><span class="tt">Joueurs (<span id="pCount">0</span>)</span><span class="mini" id="phaseLbl"></span></div>
+      <div class="plist scroll" id="playerList" style="max-height:52vh"></div>
+    </div>
+  </div>
+
+  <!-- colonne centre : phase en cours -->
+  <div class="col center">
+    <div class="panel">
+      <div class="chrono" id="chrono" hidden>
+        <div class="chrono-bar"><i id="chronoBar"></i></div>
+        <span id="chronoVal">—</span>
+      </div>
+      <div class="stage" id="stage" role="region" aria-live="polite" aria-atomic="false"></div>
+    </div>
+  </div>
+
+  <!-- colonne droite : ton rôle, indices, réglages -->
+  <div class="col right">
+    <div class="panel" id="rolePanel" hidden>
+      <div class="hd"><span class="tt">Ton rôle</span></div>
+      <div class="rolecard" id="roleCard">
+        <div class="art ghost" id="artGhost"></div>
+        <div class="tt" id="roleTag">Ton mot</div>
+        <div class="w" id="roleWord">—</div>
+        <div class="mini rolecat" id="roleCat"></div>
+        <button class="eyebtn" id="btnBlur">Caviarder</button>
+      </div>
+    </div>
+
+    <div class="panel" id="cluePanel" hidden>
+      <div class="hd"><span class="tt">Indices donnés</span></div>
+      <div class="scroll" id="clueList" style="max-height:40vh"></div>
+    </div>
+
+    <div class="panel" id="chatPanel" hidden>
+      <div class="hd"><span class="tt">Transmissions</span><span class="mini" id="chatNote"></span></div>
+      <div class="scroll" id="chatList" role="log" aria-live="polite" aria-label="Messages"></div>
+      <div class="chatbar">
+        <input class="inp" id="chatInput" maxlength="200" placeholder="Écrire…" autocomplete="off">
+        <button class="btn sm" id="chatSend" aria-label="Envoyer le message">→</button>
+      </div>
+    </div>
+
+    <div class="panel" id="cfgPanel" hidden>
+      <div class="hd"><span class="tt">Réglages</span><span class="mini" id="cfgWho"></span></div>
+      <div id="cfgBody">
+        <div class="stepper">
+          <div><div class="lbl">Undercover</div><div class="mini">Un mot très proche</div></div>
+          <div class="pm"><button data-d="under">−</button><span class="val" id="vUnder">1</span><button data-i="under">+</button></div>
+        </div>
+        <div class="stepper">
+          <div><div class="lbl">Mr White</div><div class="mini">Aucun mot</div></div>
+          <div class="pm"><button data-d="white">−</button><span class="val" id="vWhite">0</span><button data-i="white">+</button></div>
+        </div>
+        <div class="stepper">
+          <div><div class="lbl">Civils</div><div class="mini">Le reste</div></div>
+          <div class="pm"><span class="val" id="vCivil">0</span></div>
+        </div>
+        <div class="stepper"><div><div class="lbl">Mots difficiles</div><div class="mini">Paires très proches</div></div><div class="sw" data-t="hard"></div></div>
+        <div class="stepper"><div><div class="lbl">Mr White devine</div><div class="mini">Il peut voler la partie</div></div><div class="sw on" data-t="whiteGuess"></div></div>
+        <div class="stepper"><div><div class="lbl">Indice de catégorie</div><div class="mini">Affiché sur ta carte</div></div><div class="sw" data-t="showCat"></div></div>
+        <div class="stepper"><div><div class="lbl">Un civil ouvre le tour</div><div class="mini">Sinon l'ordre est tiré au sort</div></div><div class="sw" data-t="civilFirst"></div></div>
+        <div class="stepper">
+          <div><div class="lbl">Minuteur par indice</div><div class="mini">Le joueur trop lent est passé</div></div>
+          <div class="pm"><button data-d="tClue">−</button><span class="val" id="vTClue">—</span><button data-i="tClue">+</button></div>
+        </div>
+        <div class="stepper">
+          <div><div class="lbl">Minuteur de discussion</div><div class="mini">Le vote s'ouvre à la fin</div></div>
+          <div class="pm"><button data-d="tDebate">−</button><span class="val" id="vTDebate">—</span><button data-i="tDebate">+</button></div>
+        </div>
+        <div class="stepper">
+          <div><div class="lbl">Minuteur de vote</div><div class="mini">Les absents s'abstiennent</div></div>
+          <div class="pm"><button data-d="tVote">−</button><span class="val" id="vTVote">—</span><button data-i="tVote">+</button></div>
+        </div>
+      </div>
+      <div class="warn mt" id="cfgWarn" hidden></div>
+      <div class="mini mt" id="cfgHint" hidden></div>
+    </div>
+
+    <div class="panel" id="catPanel" hidden>
+      <div class="hd"><span class="tt">Catégories</span><span class="mini" id="catCount"></span></div>
+      <div class="catbar" id="catBar">
+        <button data-c="all">Tout</button>
+        <button data-c="none">Aucune</button>
+        <button data-c="invert">Inverser</button>
+      </div>
+      <div class="cats" id="catList"></div>
+    </div>
+
+    <div class="panel" id="scorePanel" hidden>
+      <div class="hd"><span class="tt">Scores</span></div>
+      <div id="scoreList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr" id="annonce" role="status" aria-live="assertive"></div>
+<div class="overlay" id="overlay" hidden>
+  <div class="em" id="ovEm">🔌</div>
+  <h2 id="ovTitle">—</h2>
+  <p class="mini" id="ovSub" style="max-width:340px"></p>
+  <button class="btn ghost sm" id="ovBtn">Retour à l'accueil</button>
+</div>
+
+<!-- Chargement dans l'ordre des dépendances : chaque fichier n'utilise les
+     précédents qu'à l'intérieur de ses fonctions, jamais au chargement.
+     Après toute modification d'un de ces fichiers, incrémenter son ?v= —
+     sinon les navigateurs resservent l'ancienne version depuis leur cache. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="words.js?v=3"></script>
+<script src="rules.js?v=7"></script>
+<script src="utils.js?v=2"></script>
+<script src="sfx.js?v=4"></script>
+<script src="art.js?v=2"></script>
+<script src="net.js?v=1"></script>
+<script src="host.js?v=5"></script>
+<script src="ui.js?v=5"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

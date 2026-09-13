@@ -1,0 +1,369 @@
+# Undercover
+
+Undercover en français, jouable dans le navigateur : chacun sur son écran,
+un code de salon à partager, aucun serveur de jeu à payer.
+
+| Fichier | Ce que c'est |
+|---|---|
+| `index.html` | La page : structure HTML et chargement des modules. |
+| `style.css` | Toute la présentation. |
+| `utils.js` | Utilitaires partagés : sélecteurs, banque de mots et catégories, stockage, couleurs de pseudo, notifications. Aucun autre fichier ne doit y ajouter d'outil générique. |
+| `sfx.js` | Effets sonores synthétisés. |
+| `art.js` | Illustrations SVG. |
+| `net.js` | Couche réseau P2P : salon, reconnexion, reprise de main. |
+| `host.js` | Rôle d'hôte : état de la partie, messages reçus, déroulé. |
+| `ui.js` | Rendu de l'interface. Ne décide de rien. |
+| `app.js` | Démarrage et écran d'accueil. |
+| `words.js` | La banque de mots. |
+| `rules.js` | **Les règles ET le moteur de partie** : fonctions pures, sans réseau ni interface. |
+| `tests.html` | 116 tests sur `rules.js`. À ouvrir après toute modification. |
+| `groups.txt` | La source lisible des groupes sémantiques (voir plus bas). |
+| `favicon.svg`, `apple-touch-icon.png` | Icônes de l'onglet et de l'écran d'accueil mobile. |
+| `og.jpg` | Image d'aperçu quand on partage le lien. |
+
+## Le jeu
+
+Tout le monde reçoit le même mot, sauf :
+
+- les **Undercover**, qui en reçoivent un très proche (Avocat / Juge) ;
+- **Mr White**, qui n'en reçoit aucun et doit deviner en écoutant.
+
+Chacun décrit à tour de rôle son mot en **un mot ou une très courte phrase**,
+puis vient la discussion, puis le vote.
+
+Les règles suivent celles de [Yanstar Studio](https://www.yanstarstudio.com/fr/undercover-how-to-play) :
+
+- les **civils** gagnent quand tous les infiltrés sont éliminés ;
+- les **infiltrés** (Undercover et Mr White) gagnent s'ils survivent jusqu'à ce
+  qu'il ne reste plus qu'**1 civil** ;
+- **Mr White** gagne immédiatement et seul s'il devine le mot des civils une
+  fois éliminé. S'il se trompe, la partie reprend son cours.
+- Points : civils **2**, Mr White **6**, Undercover **10**.
+- 3 à 20 joueurs. L'ordre de parole est tiré au sort à chaque manche — une
+  option permet de garantir qu'un civil ouvre le tour, pour que Mr White ne
+  parle jamais totalement à l'aveugle.
+
+Deux points que les règles officielles laissent ouverts, et ce que ce jeu en
+fait :
+
+- **Mr White qui se trompe** : il reste éliminé et la partie reprend. S'il
+  était le dernier infiltré, les civils gagnent — ce qui correspond au cas
+  décrit un peu partout (« Mr White éliminé sans avoir trouvé le mot : les
+  civils gagnent »), mais la partie continue logiquement si un Undercover
+  est encore en vie.
+- **La répartition des rôles** : l'application officielle « suggère
+  automatiquement » un nombre sans publier sa table. Ici le salon affiche un
+  conseil d'environ 1 imposteur pour 4 joueurs, que l'hôte reste libre
+  d'ignorer.
+
+## La banque de mots
+
+**22 252 paires** tirées de **3 688 mots**, réparties en **184 catégories**,
+sans aucune dépendance réseau.
+
+Le volume vient de la structure : `words.js` ne stocke pas des paires mais des
+**groupes de mots frères** (`Nature | Chêne, Sapin, Bouleau, Saule, ...`), et
+toutes les combinaisons deux à deux d'un groupe deviennent des paires jouables.
+Un groupe de 9 mots produit 36 paires ; **y ajouter un dixième mot en crée 9 de
+plus d'un coup**. C'est ce qui permet de tenir 22 000 paires avec seulement
+455 lignes de données. À côté, une petite liste de paires écrites à la main couvre
+les rapprochements qu'un groupe ne sait pas exprimer (Docteur/Patient,
+Voleur/Policier).
+
+Pour enrichir la banque, édite `groups.txt` puis reporte la ligne dans le bloc
+`UC_GROUPS` de `words.js` — ou ajoute directement une ligne au format
+`Catégorie | mot, mot, mot`. Un `*` en tête marque le contenu comme difficile.
+
+Deux conseils de rendement :
+
+- **ajouter un mot à un gros groupe rapporte plus que créer un petit groupe** :
+  un 21ᵉ insecte crée 20 paires d'un coup, un nouveau groupe de 5 mots n'en
+  crée que 10 ;
+- **si un groupe devient trop large, coupe-le en deux.** « Météo » va de la
+  rosée à l'ouragan : les extrêmes font des paires un peu lointaines. Deux
+  groupes « pluie douce » et « intempéries » donnent moins de paires, mais
+  toutes serrées.
+
+Les paires déjà sorties sont mémorisées dans le navigateur et ne reviennent pas
+tant que la banque n'est pas épuisée, et le mot « principal » change de camp au
+hasard à chaque manche.
+
+### Pourquoi pas une API de dictionnaire ?
+
+Le jeu n'a pas besoin de mots, il a besoin de **couples de mots voisins et
+connus de tous**. Les API lexicales ouvertes ne donnent ni l'un ni l'autre :
+
+- la catégorie « Félins » du Wiktionnaire renvoie *autamba, chat-cervier,
+  chat-pard, chat-tigre du Bengale* — du vocabulaire de lexicographe,
+  injouable en soirée ;
+- ConceptNet, la seule base sémantique multilingue ouverte, ne renvoie **aucun
+  en-tête CORS** : un site statique ne peut pas l'appeler depuis le navigateur.
+  Elle répondait par ailleurs en 502 lors des tests.
+
+Une banque locale garde le jeu instantané, hors ligne, et sans mauvaise surprise
+de vocabulaire.
+
+### Contrôle qualité
+
+Les 3 688 mots ont été passés au crible d'un lexique français de 336 000 formes
+(`an-array-of-french-words`) : tout mot absent du lexique mais situé à une seule
+lettre d'un mot existant est signalé comme coquille probable. Reste ensuite à
+trier à la main les noms propres et les emprunts, qui sont légitimement absents
+d'un dictionnaire (Zumba, tiramisu, Netflix).
+
+## Direction artistique
+
+Dossier d'enquête sous lampe d'interrogatoire : fond encre avec halo et grain,
+fiches à angles nets plutôt que cartes arrondies, laiton comme couleur d'action
+et rouge tampon pour l'élimination, titres en capitales condensées (Oswald),
+chiffres et étiquettes en mono (IBM Plex Mono). Le code du salon est présenté
+comme un **numéro de dossier**, la carte du joueur porte un tampon
+« CONFIDENTIEL », et le bouton *Caviarder* remplace le mot secret par une
+**barre de censure** noire — utile quand quelqu'un passe derrière l'écran.
+
+Les polices viennent de Google Fonts avec des piles de repli système : si le
+CDN est bloqué, la mise en page tient, seule la typo change.
+
+**Illustrations** : tout est dessiné en SVG inline dans `index.html`, aucun
+fichier image. La file d'identification sous le projecteur sur l'accueil, les
+pictogrammes au trait de chaque phase (loupe, bulles, urne, cible, chapeau,
+médaille) et la silhouette en filigrane de la carte de rôle. Les 184 catégories
+ont chacune leur pictogramme, défini dans `UC_ICONS` (`words.js`).
+
+**Habillage de la partie** : pendant les indices, une piste de passage montre
+qui a parlé (✓), qui parle et qui attend ; celui dont c'est le tour apparaît en
+grand sous un projecteur qui respire, avec trois points animés ; les indices
+déjà donnés se posent au centre comme des fiches légèrement de travers.
+
+## Rejoindre en cours de partie
+
+Un retardataire n'est plus refusé : il entre comme **spectateur**, voit les
+indices et les votes se dérouler, et il est **intégré d'office à la manche
+suivante** (bandeau « tu entres en jeu à la prochaine »). Il peut parler dans le
+chat — contrairement aux éliminés, il ne connaît aucun secret.
+
+Il entre **comme civil**, avec le mot des civils. Le choix n'est pas arbitraire :
+glisser un imposteur en cours de route changerait l'équilibre annoncé au
+lancement et pourrait renverser la majorité civile sans que personne ne l'ait
+décidé. Son entrée est inscrite au journal de la manche, pour que les autres
+sachent qu'un joueur de plus est à la table.
+
+## Si les joueurs partent
+
+Une manche a besoin d'au moins **deux participants présents** pour avancer. En
+dessous, un bandeau rouge annonce l'interruption et un compte à rebours de
+**30 secondes** démarre — les absents reviennent souvent d'eux-mêmes (page
+rechargée, wifi coupé, tunnel). Passé ce délai, tout le monde revient au salon :
+**joueurs et scores conservés**, rôles et manche effacés. L'hôte peut aussi
+couper court avec « Revenir au salon maintenant ».
+
+Sans cette règle, la partie continuait dans le vide : les absents étaient bien
+sautés au tour de parole et n'empêchaient plus le vote, mais rien n'arrêtait la
+manche quand il ne restait plus personne pour jouer.
+
+## Si l'hôte ne revient pas
+
+Au-delà de quinze secondes sans hôte, chaque joueur voit apparaître un bouton
+**« Reprendre la main »**. Celui qui l'actionne relance le salon **sous le même
+code** : les autres, qui retentaient la connexion en boucle, reviennent seuls et
+**les scores sont conservés**. La manche en cours est perdue — les rôles
+n'existaient que chez l'ancien hôte, personne d'autre ne pouvait les connaître.
+Les tentatives de reconnexion continuent en parallèle : si l'hôte d'origine
+revient entre-temps, la proposition disparaît d'elle-même.
+
+## Architecture : où vit la logique
+
+Le projet est découpé en modules à responsabilité unique, chargés dans l'ordre
+de leurs dépendances (voir les balises `<script>` en bas d'`index.html`). Chaque
+fichier n'utilise les précédents qu'à l'intérieur de ses fonctions, jamais au
+chargement — c'est ce qui permet ce découpage sans système de modules.
+
+Tout ce qui **décide** de quelque chose vit dans `rules.js` : répartition des
+rôles, ordre de parole, dépouillement, conditions de victoire, barème, minuteurs,
+enchaînement des phases, et surtout la **projection des vues** — le filtre
+anti-triche qui décide de ce que chaque joueur a le droit de voir.
+
+Ces fonctions ne touchent ni au réseau, ni au DOM, ni à l'horloge (l'instant leur
+est toujours passé en paramètre). Conséquence : `tests.html` rejoue des parties
+entières — déconnexions, égalités, Mr White, retardataires, minuteurs — en une
+seconde et sans navigateur.
+
+`index.html` ne garde que le transport (P2P), l'affichage, le son, et le tirage
+des mots (qui persiste un historique). **Une règle qui change se change dans
+`rules.js`, et le test échoue si on se trompe.**
+
+## Récapitulatif du scrutin
+
+Après chaque vote, tout le monde voit **qui a voté contre qui**, abstentions
+comprises. Le détail est capturé avant toute remise à zéro, et n'est exposé
+qu'une fois le vote clos — pendant le scrutin, personne ne sait rien.
+
+## Exclure un joueur
+
+Le bouton ✕ de la liste est disponible **à tout moment** pour l'hôte. Dans le
+salon, le joueur est simplement retiré. **En pleine manche**, il ne peut pas être
+effacé — son nom apparaît dans les indices déjà donnés et son rôle compte dans
+l'équilibre : il est donc éliminé, rôle révélé, et la partie continue sans lui
+(si son départ décide de l'issue, elle se termine proprement). Son jeton est
+ajouté à une liste d'exclus, sinon sa reconnexion automatique le ferait revenir
+aussitôt.
+
+## Accessibilité
+
+Focus clavier visible, libellés sur les commandes sans texte, code du salon
+épelé pour les lecteurs d'écran, annonces vocales à chaque changement de phase,
+cibles tactiles de 44 px sur écran tactile, et respect de
+`prefers-reduced-motion` (les animations s'arrêtent pour qui les a désactivées).
+
+## Chat
+
+Une zone **Transmissions** disponible dès le salon. Le panneau se place là où il
+y a de la place : **au centre dans le salon** (la colonne de droite y est
+occupée par les réglages et les catégories, le centre est presque vide) et
+**à droite pendant la partie**, où il prend toute la hauteur restante. La liste
+se recolle au dernier message, sauf si on est remonté lire l'historique.
+Les joueurs **éliminés passent en lecture seule** : ils suivent la fin de la
+partie sans pouvoir l'influencer. Anti-spam à 700 ms par joueur, messages
+limités à 200 caractères, affichage par `textContent` (aucune injection
+possible). Les 60 derniers messages sont conservés.
+
+## Minuteurs
+
+Trois réglages indépendants, à fixer **avant le lancement** :
+
+- **par indice** — 15 s à 90 s : le joueur qui dépasse est passé automatiquement ;
+- **de discussion** — 30 s à 5 min : le vote s'ouvre tout seul à la fin ;
+- **de vote** — 20 s à 90 s : à l'échéance, on dépouille les votes exprimés et
+  les silencieux comptent pour des abstentions.
+
+Sans minuteur de vote, un joueur qui laisse son onglet ouvert sans cliquer
+bloquerait la manche : l'hôte dispose alors du bouton **« Clore le vote sans les
+absents »**, qui dépouille immédiatement.
+
+Chacun se règle sur « — » pour le désactiver. Une barre de progression s'affiche
+au-dessus de la scène, elle vire au rouge et bipe sur les cinq dernières
+secondes. Le temps restant transite en **durée**, jamais en heure absolue : les
+horloges des joueurs ne sont pas synchronisées entre elles.
+
+## Si l'hôte tombe
+
+L'état complet de la partie est écrit dans le navigateur de l'hôte à chaque
+diffusion. S'il recharge ou ferme son onglet par accident, l'accueil lui propose
+de **reprendre le dossier** ; pendant ce temps les autres joueurs affichent
+« reconnexion… » et retentent la connexion pendant deux minutes. Dès que l'hôte
+revient, **chacun retrouve son rôle et son mot**, la manche reprend où elle en
+était.
+
+L'identité d'un joueur tient dans un jeton de `sessionStorage` : il survit à un
+rechargement de la page, mais reste propre à chaque onglet — deux personnes sur
+la même machine restent deux joueurs distincts.
+
+## Sons
+
+Tous les effets sont **synthétisés en WebAudio** — oscillateurs et bruit filtré,
+zéro fichier audio, aucun son système. La palette est sèche et sombre :
+
+| Moment | Son |
+|---|---|
+| Un agent rejoint | deux notes brèves |
+| Lancement | montée sourde en dents de scie |
+| C'est ton tour | deux notes tendues |
+| Un indice tombe | tap de stylo sur la table |
+| Ouverture du vote | glissement grave |
+| Élimination | le tampon s'abat |
+| Mr White devine | tenue dissonante |
+| Victoire civils / imposteurs | trois notes montantes / descendantes |
+
+Le contexte audio ne démarre qu'au premier clic (politique des navigateurs) : il
+est débloqué au moment où l'on crée ou rejoint un salon. Le bouton du panneau
+*Salon* fait descendre le volume d'un cran à chaque clic — **♪♪ fort → ♪ doux →
+✕ coupé**, puis retour en haut — et le niveau est mémorisé dans le navigateur.
+
+Chaque message du chat porte son **heure d'envoi** (date complète en infobulle).
+
+**Cache** : `index.html` charge `words.js?v=N` et `rules.js?v=N`. Après toute
+modification de l'un de ces fichiers, **incrémente son numéro** — sinon les
+navigateurs resservent l'ancienne version depuis leur cache. Ça s'applique aussi
+à `tests.html`, qui charge les mêmes modules : un test vert sur du code périmé ne
+prouve rien.
+
+## Aperçu du lien
+
+Quand le lien est collé dans Discord, WhatsApp, Slack ou Twitter, l'aperçu
+affiche le titre, la description et `og.jpg` (1200×630, 50 Ko) — la file
+d'identification sous le projecteur. L'onglet du navigateur porte `favicon.svg`,
+et l'ajout à l'écran d'accueil d'un iPhone utilise `apple-touch-icon.png`.
+
+Les chemins des balises `og:` sont **relatifs** : les robots les résolvent depuis
+l'adresse de la page, ce qui marche sur n'importe quel domaine sans rien
+changer. Si un service refusait l'aperçu, remplace les deux `content="og.jpg"`
+par l'URL absolue (`https://ton-compte.github.io/ton-repo/og.jpg`).
+
+Discord garde ses aperçus en cache : après une mise en ligne, un lien déjà
+partagé peut montrer l'ancienne version pendant quelques heures. Ajouter
+`?1` à la fin du lien force un nouvel aperçu.
+
+## Mettre en ligne sur GitHub Pages
+
+```bash
+git init
+git add .
+git commit -m "Undercover"
+git branch -M main
+git remote add origin git@github.com:<ton-compte>/<ton-repo>.git
+git push -u origin main
+```
+
+Puis dans le dépôt : **Settings → Pages → Source : Deploy from a branch →
+`main` / `/ (root)` → Save**. Le jeu est en ligne une minute plus tard sur
+`https://<ton-compte>.github.io/<ton-repo>/`.
+
+Rien d'autre à configurer : pas de build, pas de dépendance à installer, pas de
+serveur à louer.
+
+## Comment le multijoueur fonctionne sans serveur
+
+Les navigateurs se parlent **directement** entre eux (WebRTC, via la librairie
+PeerJS chargée depuis un CDN). Celui qui crée le salon devient l'hôte : il
+détient l'état de la partie et envoie à chacun une vue filtrée — **personne ne
+reçoit le rôle des autres** tant qu'il n'a pas été révélé, même en inspectant
+le trafic réseau.
+
+Ce qu'il faut savoir :
+
+- **L'onglet de l'hôte doit rester ouvert.** S'il le ferme, le salon meurt.
+- La mise en relation initiale passe par le serveur public gratuit de PeerJS.
+  Il ne voit jamais le contenu des parties, seulement « tel navigateur cherche
+  tel code ». S'il est indisponible, la création de salon échoue : il suffit de
+  réessayer, ou d'héberger son propre PeerServer et de le renseigner dans
+  `newPeer()`.
+- Les réseaux d'entreprise très fermés peuvent bloquer le WebRTC.
+- Un joueur qui ferme son onglet est détecté en ~10 s et son tour est sauté ;
+  s'il revient avec le même navigateur, il retrouve son rôle et sa place.
+
+## Réglages (hôte)
+
+Nombre d'Undercover, nombre de Mr White, mots difficiles, « Mr White devine »,
+indice de catégorie, « un civil ouvre le tour ». Modifiables dans le salon
+**et entre deux parties**.
+
+### Filtre de catégories
+
+Sur grand écran, les colonnes latérales sont bornées à la hauteur de la fenêtre
+et défilent d'un bloc ; la liste des catégories garde un plancher de 150 px pour
+rester utilisable quoi qu'il arrive. L'ordre des panneaux change selon la phase :
+réglages et catégories en haut dans le salon, rôle et indices en partie.
+
+
+Les 184 catégories s'activent ou se coupent une par une avant le lancement, avec
+le nombre de paires de chacune et trois raccourcis (Tout / Aucune / Inverser).
+Le compteur affiche en direct le nombre de paires encore disponibles, et le
+lancement est bloqué si la sélection est vide. Pratique pour couper la
+géographie avec des enfants, ou ne jouer qu'en « Nourriture » pendant un repas.
+
+En ligne, seul l'hôte règle le filtre ; les autres joueurs le voient en lecture
+seule. Chaque navigateur ayant le même `words.js`, seule la sélection transite
+sur le réseau.
+Les civils doivent rester majoritaires, **3 joueurs minimum, 20 maximum**.
+Le salon affiche ce compte en clair, et ne montre des emplacements vides que
+tant que le minimum n'est pas atteint.

@@ -1,0 +1,7 @@
+# Rien à construire ici : le dépôt EST le site. On n'ignore que le bruit local.
+.DS_Store
+Thumbs.db
+*~
+*.swp
+.vscode/
+.idea/

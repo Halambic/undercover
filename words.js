@@ -1,0 +1,964 @@
+/* ============================================================================
+   Banque de mots du jeu.
+
+   Deux sources, fusionnées et dédoublonnées au chargement :
+
+   1. UC_GROUPS — des groupes de mots frères. Chaque groupe produit TOUTES ses
+      combinaisons deux à deux : un groupe de 9 mots donne 36 paires. C'est ce
+      qui fait exploser le volume — ajouter un mot à un groupe de 9 crée 9
+      paires d'un coup. Format : "Catégorie | mot, mot, mot, ...".
+
+   2. UC_PAIRS — des paires écrites à la main, pour les rapprochements qu'un
+      groupe ne sait pas exprimer (Docteur/Patient, Voleur/Policier) ou les
+      couples particulièrement savoureux. Format : "civil/undercover/catégorie".
+
+   Dans les deux cas, un "*" en tête de ligne marque le contenu comme difficile :
+   il ne sort que si l'option "mots difficiles" est activée.
+   ============================================================================ */
+
+window.UC_GROUPS = `
+Animaux | Chat, Chien, Lapin, Hamster, Cochon d'Inde, Perruche, Poisson rouge, Tortue, Furet
+Animaux | Lion, Tigre, Panthère, Guépard, Jaguar, Puma, Lynx
+Animaux | Vache, Cochon, Mouton, Chèvre, Poule, Canard, Oie, Cheval, Âne, Dinde
+Animaux | Éléphant, Girafe, Rhinocéros, Hippopotame, Zèbre, Gazelle, Buffle, Autruche
+Animaux | Renard, Loup, Sanglier, Cerf, Blaireau, Écureuil, Hérisson, Chevreuil
+Animaux | Requin, Dauphin, Baleine, Orque, Phoque, Otarie, Méduse, Pieuvre, Raie
+Animaux | Saumon, Thon, Sardine, Truite, Morue, Anchois, Carpe, Anguille
+Animaux | Pigeon, Moineau, Corbeau, Mouette, Hirondelle, Merle, Pie, Rouge-gorge
+Animaux | Aigle, Faucon, Hibou, Chouette, Vautour, Buse, Épervier
+Animaux | Abeille, Guêpe, Frelon, Fourmi, Moustique, Mouche, Coccinelle, Papillon, Libellule, Sauterelle
+Animaux | Serpent, Lézard, Crocodile, Alligator, Iguane, Caméléon, Gecko, Cobra
+Animaux | Souris, Rat, Castor, Marmotte, Taupe, Belette, Loutre
+Animaux | Singe, Gorille, Chimpanzé, Orang-outan, Babouin, Ouistiti, Lémurien
+Animaux | Ours polaire, Manchot, Renne, Morse, Husky, Phoque, Harfang
+Animaux | Escargot, Limace, Ver de terre, Chenille, Mille-pattes, Araignée, Scorpion, Tique
+Animaux | Grenouille, Crapaud, Salamandre, Triton, Têtard, Axolotl
+Animaux | Kangourou, Koala, Ornithorynque, Wombat, Émeu, Dingo
+Nourriture | Pomme, Poire, Pêche, Abricot, Prune, Cerise, Raisin, Figue, Nectarine
+Nourriture | Citron, Orange, Pamplemousse, Mandarine, Clémentine, Citron vert
+Nourriture | Banane, Mangue, Ananas, Papaye, Kiwi, Litchi, Noix de coco, Fruit de la passion
+Nourriture | Fraise, Framboise, Myrtille, Mûre, Groseille, Cassis, Airelle
+Nourriture | Pastèque, Melon, Courge, Potiron, Citrouille, Butternut
+Nourriture | Carotte, Navet, Radis, Betterave, Panais, Pomme de terre, Patate douce, Céleri
+Nourriture | Épinard, Salade, Brocoli, Chou, Haricot vert, Petit pois, Courgette, Poireau, Aubergine
+Nourriture | Tomate, Poivron, Concombre, Oignon, Ail, Échalote, Champignon, Artichaut
+Nourriture | Basilic, Persil, Thym, Romarin, Menthe, Coriandre, Origan, Ciboulette, Laurier
+Nourriture | Poivre, Sel, Paprika, Curry, Cannelle, Safran, Cumin, Gingembre, Muscade
+Nourriture | Spaghetti, Macaroni, Lasagne, Ravioli, Tagliatelle, Penne, Gnocchi, Nouilles
+Nourriture | Baguette, Brioche, Croissant, Pain au chocolat, Chausson aux pommes, Pain de mie, Bagel, Beignet
+Nourriture | Gâteau, Tarte, Éclair, Mille-feuille, Macaron, Tiramisu, Cheesecake, Crème brûlée, Profiterole
+Nourriture | Bonbon, Chewing-gum, Sucette, Caramel, Nougat, Réglisse, Guimauve, Praline
+Nourriture | Céréales, Yaourt, Confiture, Miel, Beurre, Pain grillé, Granola, Compote
+Nourriture | Burger, Frites, Hot-dog, Pizza, Kebab, Tacos, Nuggets, Sandwich, Wrap
+Nourriture | Raclette, Fondue, Cassoulet, Pot-au-feu, Blanquette, Bœuf bourguignon, Quiche, Ratatouille, Gratin
+Nourriture | Sushi, Paella, Couscous, Ramen, Chili, Tajine, Falafel, Dim sum, Pad thaï
+Nourriture | Camembert, Roquefort, Comté, Brie, Mozzarella, Parmesan, Gruyère, Feta
+Nourriture | Jambon, Saucisson, Bacon, Chorizo, Pâté, Rillettes, Salami, Merguez, Boudin
+Nourriture | Steak, Poulet, Agneau, Porc, Veau, Dinde, Lapin, Côtelette, Rôti
+Nourriture | Cacahuète, Noisette, Amande, Noix, Pistache, Noix de cajou, Pignon
+Nourriture | Soupe, Bouillon, Velouté, Potage, Gaspacho, Minestrone, Consommé
+Nourriture | Glace, Sorbet, Yaourt glacé, Milkshake, Granité, Esquimau
+Nourriture | Omelette, Œuf au plat, Œuf dur, Œuf à la coque, Œufs brouillés, Œuf poché
+Boisson | Café, Thé, Chocolat chaud, Cappuccino, Expresso, Infusion, Latte, Moka
+Boisson | Bière, Vin, Champagne, Cidre, Whisky, Vodka, Rhum, Gin, Tequila, Pastis
+Boisson | Mojito, Piña colada, Margarita, Spritz, Sangria, Punch, Cosmopolitan, Bloody Mary
+Boisson | Eau, Limonade, Coca, Jus d'orange, Smoothie, Sirop, Thé glacé, Soda, Tonic
+Transport | Voiture, Camion, Bus, Moto, Scooter, Camionnette, Taxi, Caravane, Tracteur
+Transport | Vélo, Trottinette, Skateboard, Rollers, Hoverboard, Monocycle, Draisienne
+Transport | Train, Métro, Tramway, TGV, Téléphérique, Funiculaire, Monorail
+Transport | Avion, Hélicoptère, Montgolfière, Planeur, Deltaplane, Parachute, Drone, Fusée
+Transport | Bateau, Voilier, Ferry, Sous-marin, Kayak, Canoë, Paquebot, Jet-ski, Pédalo, Radeau
+Transport | Ambulance, Camion de pompier, Voiture de police, Dépanneuse, Corbillard, Fourgon
+Sport | Football, Rugby, Basket, Handball, Volley, Water-polo, Football américain
+Sport | Tennis, Badminton, Ping-pong, Squash, Padel, Pelote basque
+Sport | Boxe, Judo, Karaté, Lutte, Taekwondo, MMA, Escrime, Sumo, Aïkido
+Sport | Ski, Snowboard, Luge, Patinage, Hockey, Biathlon, Bobsleigh, Curling
+Sport | Natation, Plongée, Surf, Kitesurf, Aviron, Voile, Paddle, Plongeon
+Sport | Marathon, Sprint, Saut en longueur, Saut à la perche, Lancer de poids, Haies, Javelot, Triathlon
+Sport | Yoga, Pilates, Musculation, Crossfit, Zumba, Aérobic, Stretching
+Sport | Golf, Pétanque, Bowling, Fléchettes, Tir à l'arc, Billard, Palet
+Sport | Échecs, Dames, Scrabble, Monopoly, Cluedo, Risk, Backgammon, Uno, Trivial Pursuit
+Sport | Escalade, Randonnée, Spéléologie, Alpinisme, Via ferrata, Parapente, Saut à l'élastique
+Sport | Équitation, Course hippique, Saut d'obstacles, Polo, Rodéo, Dressage
+Musique | Guitare, Violon, Violoncelle, Harpe, Banjo, Ukulélé, Contrebasse, Mandoline
+Musique | Flûte, Clarinette, Saxophone, Trompette, Trombone, Hautbois, Cor, Tuba
+Musique | Batterie, Tambour, Djembé, Xylophone, Triangle, Maracas, Cymbales, Tambourin
+Musique | Piano, Orgue, Synthétiseur, Accordéon, Clavecin, Harmonium
+Musique | Rock, Jazz, Rap, Reggae, Blues, Métal, Électro, Classique, Country, Funk
+Musique | Concert, Festival, Karaoké, Opéra, Comédie musicale, Récital, Bal
+Objets | Casserole, Poêle, Marmite, Louche, Spatule, Fouet, Passoire, Râpe, Cocotte
+Objets | Fourchette, Couteau, Cuillère, Baguettes, Assiette, Bol, Verre, Tasse, Soucoupe
+Objets | Frigo, Congélateur, Four, Micro-ondes, Lave-vaisselle, Machine à laver, Aspirateur, Grille-pain, Mixeur
+Objets | Chaise, Tabouret, Fauteuil, Canapé, Table, Bureau, Commode, Armoire, Étagère, Lit
+Objets | Savon, Shampooing, Brosse à dents, Dentifrice, Serviette, Rasoir, Miroir, Peigne
+Objets | Stylo, Crayon, Feutre, Marqueur, Gomme, Règle, Ciseaux, Colle, Agrafeuse, Surligneur
+Objets | Marteau, Tournevis, Pince, Scie, Perceuse, Clé à molette, Niveau, Ponceuse, Burin
+Objets | Lampe, Bougie, Lampadaire, Torche, Néon, Lustre, Guirlande, Veilleuse
+Objets | Sac à dos, Valise, Cartable, Sacoche, Portefeuille, Trousse, Panier, Coffre, Besace
+Objets | Bague, Collier, Bracelet, Boucle d'oreille, Montre, Broche, Pendentif, Chevalière
+Objets | Balai, Serpillière, Éponge, Chiffon, Plumeau, Seau, Raclette, Balayette
+Objets | Livre, Magazine, Journal, Bande dessinée, Roman, Dictionnaire, Cahier, Agenda, Carnet
+Objets | Parapluie, Ombrelle, Éventail, Canne, Béquille, Sac de couchage, Hamac
+Objets | Clé, Cadenas, Serrure, Verrou, Chaîne, Menottes, Coffre-fort
+Objets | Appareil photo, Caméra, Micro, Haut-parleur, Trépied, Projecteur, Jumelles, Télescope
+Vêtements | Chemise, T-shirt, Pull, Sweat, Débardeur, Polo, Gilet, Chemisier
+Vêtements | Pantalon, Jean, Short, Jupe, Legging, Jogging, Bermuda, Salopette
+Vêtements | Manteau, Veste, Blouson, Imperméable, Doudoune, Trench, Parka, Cape, Poncho
+Vêtements | Basket, Botte, Sandale, Escarpin, Mocassin, Tong, Chausson, Ballerine, Espadrille
+Vêtements | Bonnet, Casquette, Chapeau, Écharpe, Foulard, Gant, Ceinture, Cravate, Béret
+Vêtements | Pyjama, Peignoir, Robe de chambre, Maillot de bain, Chaussette, Collant, Nuisette
+Lieux | Rue, Avenue, Boulevard, Place, Ruelle, Impasse, Rond-point, Trottoir, Passage piéton
+Lieux | Supermarché, Épicerie, Boulangerie, Boucherie, Pharmacie, Librairie, Fleuriste, Quincaillerie, Poissonnerie
+Lieux | Restaurant, Bar, Café, Boîte de nuit, Cinéma, Théâtre, Opéra, Casino, Brasserie
+Lieux | Musée, Galerie, Bibliothèque, Médiathèque, Château, Cathédrale, Monument, Palais
+Lieux | Aéroport, Gare, Port, Station-service, Hôtel, Auberge, Camping, Motel, Péage
+Lieux | Forêt, Jungle, Désert, Savane, Montagne, Colline, Vallée, Plaine, Marais, Toundra
+Lieux | Mer, Océan, Lac, Rivière, Fleuve, Étang, Cascade, Torrent, Ruisseau, Canal
+Lieux | Hôpital, École, Université, Mairie, Commissariat, Prison, Tribunal, Caserne, Ambassade
+Lieux | Plage, Piscine, Parc, Jardin, Zoo, Aquarium, Fête foraine, Parc d'attractions, Patinoire
+Lieux | Grotte, Tunnel, Cave, Mine, Catacombes, Bunker, Souterrain, Puits
+Lieux | Cuisine, Salon, Chambre, Salle de bain, Garage, Grenier, Véranda, Couloir, Buanderie
+Lieux | Île, Péninsule, Falaise, Dune, Récif, Lagune, Atoll, Fjord
+Lieux | Pont, Viaduc, Tour, Gratte-ciel, Phare, Barrage, Aqueduc, Arc de triomphe
+Métiers | Médecin, Infirmier, Chirurgien, Dentiste, Pharmacien, Vétérinaire, Kinésithérapeute, Sage-femme, Radiologue
+Métiers | Pompier, Policier, Gendarme, Ambulancier, Militaire, Secouriste, Maître-nageur, Garde-côte
+Métiers | Avocat, Juge, Procureur, Notaire, Huissier, Greffier, Médiateur
+Métiers | Cuisinier, Pâtissier, Boulanger, Boucher, Serveur, Barman, Sommelier, Traiteur, Chocolatier
+Métiers | Maçon, Menuisier, Plombier, Électricien, Peintre en bâtiment, Couvreur, Carreleur, Architecte, Grutier
+Métiers | Acteur, Chanteur, Danseur, Sculpteur, Écrivain, Photographe, Réalisateur, Illustrateur, Humoriste
+Métiers | Professeur, Instituteur, Formateur, Éducateur, Directeur, Surveillant, Documentaliste
+Métiers | Pilote, Chauffeur, Conducteur, Marin, Steward, Contrôleur, Livreur, Facteur, Aiguilleur
+Métiers | Agriculteur, Éleveur, Jardinier, Fleuriste, Pêcheur, Bûcheron, Berger, Vigneron, Apiculteur
+Métiers | Comptable, Secrétaire, Banquier, Informaticien, Commercial, Consultant, Journaliste, Traducteur
+Métiers | Coiffeur, Barbier, Esthéticienne, Tatoueur, Masseur, Manucure, Styliste
+Métiers | Astronaute, Scientifique, Chercheur, Archéologue, Biologiste, Astronome, Chimiste, Géologue
+Nature | Pluie, Neige, Grêle, Brouillard, Orage, Tempête, Vent, Canicule, Verglas, Bruine
+Nature | Soleil, Lune, Étoile, Nuage, Arc-en-ciel, Éclair, Aurore boréale, Comète, Éclipse
+Nature | Planète, Galaxie, Trou noir, Astéroïde, Satellite, Météorite, Nébuleuse, Constellation
+Nature | Chêne, Sapin, Bouleau, Saule, Peuplier, Platane, Olivier, Palmier, Érable, Cyprès
+Nature | Rose, Tulipe, Marguerite, Tournesol, Orchidée, Lilas, Pivoine, Jonquille, Coquelicot, Muguet
+Nature | Séisme, Tsunami, Éruption, Avalanche, Inondation, Ouragan, Tornade, Incendie, Glissement de terrain
+Nature | Sable, Terre, Boue, Gravier, Roche, Argile, Poussière, Galet
+Nature | Cactus, Fougère, Mousse, Lierre, Bambou, Algue, Champignon, Ronce
+Nature | Diamant, Or, Argent, Rubis, Émeraude, Saphir, Perle, Cuivre, Bronze
+Fiction | Vampire, Zombie, Loup-garou, Fantôme, Momie, Squelette, Ogre, Troll, Croque-mitaine
+Fiction | Sorcier, Magicien, Fée, Elfe, Nain, Gobelin, Lutin, Druide, Enchanteur
+Fiction | Dragon, Licorne, Sirène, Phénix, Griffon, Centaure, Minotaure, Yéti, Kraken
+Fiction | Super-héros, Chevalier, Samouraï, Ninja, Pirate, Cow-boy, Gladiateur, Mousquetaire, Viking
+Fiction | Robot, Cyborg, Extraterrestre, Vaisseau spatial, Laser, Téléportation, Clone, Androïde, Rayon tracteur
+Fiction | Baguette magique, Potion, Grimoire, Boule de cristal, Amulette, Cape d'invisibilité, Balai volant
+Numérique | Instagram, TikTok, Snapchat, Facebook, Twitter, LinkedIn, Pinterest, Discord, Reddit
+Numérique | YouTube, Twitch, Netflix, Disney+, Prime Video, Dailymotion, Spotify, Deezer
+Numérique | Ordinateur, Tablette, Téléphone, Console, Clavier, Souris, Écran, Imprimante, Casque, Webcam
+Numérique | Mot de passe, Code PIN, Wifi, Bluetooth, Cloud, Bug, Virus, Mise à jour, Pare-feu
+Numérique | Selfie, Story, Emoji, GIF, Mème, Podcast, Newsletter, Tutoriel, Vlog
+Numérique | Bitcoin, Action en bourse, Carte bancaire, Virement, Chèque, Espèces, Pourboire, Facture
+Corps | Œil, Nez, Bouche, Oreille, Sourcil, Menton, Joue, Front, Lèvre
+Corps | Bras, Jambe, Main, Pied, Doigt, Orteil, Coude, Genou, Épaule, Cheville
+Corps | Cœur, Poumon, Cerveau, Estomac, Foie, Rein, Intestin, Rate
+Corps | Rhume, Grippe, Fièvre, Migraine, Toux, Angine, Allergie, Courbature, Nausée
+Corps | Cheveux, Barbe, Moustache, Frange, Chignon, Tresse, Queue de cheval, Dreadlocks
+Événements | Noël, Pâques, Halloween, Nouvel An, Carnaval, Saint-Valentin, Anniversaire, Mariage, Poisson d'avril
+Événements | Naissance, Baptême, Communion, Diplôme, Retraite, Déménagement, Divorce, Fiançailles
+Événements | Examen, Entretien d'embauche, Permis de conduire, Oral, Discours, Audition, Casting
+Événements | Manifestation, Grève, Élection, Référendum, Défilé, Cérémonie, Inauguration
+Concepts | Joie, Tristesse, Colère, Peur, Jalousie, Honte, Fierté, Surprise, Dégoût, Ennui
+Concepts | Rêve, Cauchemar, Sieste, Insomnie, Ronflement, Somnambulisme, Réveil, Berceuse
+Concepts | Amour, Amitié, Rivalité, Confiance, Trahison, Réconciliation, Rupture, Complicité
+Concepts | Salaire, Dette, Impôt, Épargne, Prêt, Héritage, Amende, Loyer, Prime
+Concepts | Seconde, Minute, Heure, Jour, Semaine, Mois, Année, Siècle, Décennie
+Concepts | Mensonge, Secret, Rumeur, Ragot, Aveu, Promesse, Serment, Alibi
+Concepts | Chance, Hasard, Destin, Malédiction, Superstition, Présage, Coïncidence
+Concepts | Silence, Écho, Murmure, Cri, Chuchotement, Vacarme, Sifflement, Grognement
+École | Mathématiques, Histoire, Géographie, Physique, Chimie, Biologie, Philosophie, Anglais, Sport
+École | Récréation, Cantine, Devoirs, Contrôle, Rentrée, Vacances, Conseil de classe, Colle
+École | Cartable, Trousse, Classeur, Manuel, Tableau, Craie, Compas, Calculatrice
+Maison | Porte, Fenêtre, Volet, Rideau, Escalier, Balcon, Terrasse, Toit, Cheminée
+Maison | Tapis, Coussin, Couverture, Oreiller, Drap, Couette, Matelas, Édredon
+Maison | Cadre photo, Vase, Bougeoir, Horloge, Tableau, Statuette, Plante verte, Aquarium
+Animaux | Chat, Chien, Lapin, Hamster, Cochon d'Inde, Perruche, Poisson rouge, Tortue, Furet, Canari, Chinchilla, Gerbille, Perroquet
+Animaux | Lion, Tigre, Panthère, Guépard, Jaguar, Puma, Lynx, Léopard, Léopard des neiges
+Animaux | Vache, Cochon, Mouton, Chèvre, Poule, Canard, Oie, Cheval, Âne, Dinde, Coq, Bélier, Taureau, Poney, Lama, Alpaga
+Animaux | Éléphant, Girafe, Rhinocéros, Hippopotame, Zèbre, Gazelle, Buffle, Autruche, Antilope, Hyène, Suricate, Phacochère
+Animaux | Renard, Loup, Sanglier, Cerf, Blaireau, Écureuil, Hérisson, Chevreuil, Fouine, Putois, Lièvre, Faisan
+Animaux | Requin, Dauphin, Baleine, Orque, Phoque, Otarie, Méduse, Pieuvre, Raie, Espadon, Hippocampe, Étoile de mer, Crabe, Homard, Crevette, Moule, Huître
+Animaux | Pigeon, Moineau, Corbeau, Mouette, Hirondelle, Merle, Pie, Rouge-gorge, Mésange, Étourneau, Geai, Coucou, Pivert
+Animaux | Aigle, Faucon, Hibou, Chouette, Vautour, Buse, Épervier, Milan, Condor, Balbuzard
+Animaux | Abeille, Guêpe, Frelon, Fourmi, Moustique, Mouche, Coccinelle, Papillon, Libellule, Sauterelle, Criquet, Grillon, Cafard, Puce, Punaise, Luciole
+Animaux | Serpent, Lézard, Crocodile, Alligator, Iguane, Caméléon, Gecko, Cobra, Python, Vipère, Boa, Varan
+Animaux | Flamant rose, Pélican, Cygne, Héron, Grue, Ibis, Cigogne, Canard colvert, Oie sauvage
+Animaux | Perroquet, Toucan, Colibri, Paon, Perruche, Cacatoès, Ara, Calao
+Animaux | Panda, Koala, Paresseux, Tapir, Okapi, Fourmilier, Tatou, Pangolin
+Animaux | Chameau, Dromadaire, Lama, Alpaga, Yak, Bison, Buffle, Bœuf musqué
+Nourriture | Pomme, Poire, Pêche, Abricot, Prune, Cerise, Raisin, Figue, Nectarine, Coing, Mirabelle, Brugnon, Datte, Grenade
+Nourriture | Banane, Mangue, Ananas, Papaye, Kiwi, Litchi, Noix de coco, Fruit de la passion, Goyave, Carambole, Ramboutan
+Nourriture | Carotte, Navet, Radis, Betterave, Panais, Pomme de terre, Patate douce, Céleri, Topinambour, Rutabaga
+Nourriture | Épinard, Salade, Brocoli, Chou, Haricot vert, Petit pois, Courgette, Poireau, Aubergine, Chou-fleur, Endive, Fenouil, Asperge, Blette, Cresson
+Nourriture | Gâteau, Tarte, Éclair, Mille-feuille, Macaron, Tiramisu, Cheesecake, Crème brûlée, Profiterole, Paris-Brest, Baba au rhum, Clafoutis, Flan, Cookie, Brownie
+Nourriture | Riz, Pâtes, Farine, Sucre, Huile, Vinaigre, Conserve, Lentilles, Pois chiches, Semoule, Quinoa, Boulgour, Haricots rouges
+Nourriture | Ketchup, Mayonnaise, Moutarde, Sauce soja, Vinaigrette, Béchamel, Pesto, Harissa, Aïoli, Sauce tomate, Guacamole, Houmous
+Nourriture | Croissant, Pain au chocolat, Chausson aux pommes, Palmier, Chouquette, Brioche, Beignet, Donut, Churros, Gaufre, Crêpe, Pancake
+Nourriture | Crème fraîche, Lait, Beurre, Yaourt, Fromage blanc, Crème chantilly, Lait concentré, Kéfir
+Nourriture | Pizza margherita, Pizza quatre fromages, Pizza reine, Calzone, Focaccia, Bruschetta, Panini
+Boisson | Café, Thé, Chocolat chaud, Cappuccino, Expresso, Infusion, Latte, Moka, Déca, Tisane, Chicorée, Matcha
+Boisson | Bière, Vin, Champagne, Cidre, Whisky, Vodka, Rhum, Gin, Tequila, Pastis, Cognac, Porto, Saké, Hydromel
+Boisson | Eau, Limonade, Coca, Jus d'orange, Smoothie, Sirop, Thé glacé, Soda, Tonic, Jus de pomme, Eau gazeuse, Milkshake, Citronnade
+Transport | Voiture, Camion, Bus, Moto, Scooter, Camionnette, Taxi, Caravane, Tracteur, Quad, Buggy, Limousine, Bulldozer, Grue
+Transport | Avion, Hélicoptère, Montgolfière, Planeur, Deltaplane, Parachute, Drone, Fusée, Dirigeable, ULM, Navette spatiale, Jetpack
+Transport | Bateau, Voilier, Ferry, Sous-marin, Kayak, Canoë, Paquebot, Jet-ski, Pédalo, Radeau, Barque, Chalutier, Gondole, Catamaran, Péniche
+Voiture | Volant, Frein, Moteur, Pneu, Phare, Rétroviseur, Coffre, Ceinture de sécurité, Klaxon, Essuie-glace, Pare-brise, Boîte de vitesses, Airbag, Portière
+Vélo | Guidon, Selle, Pédale, Chaîne, Sonnette, Roue, Panier, Garde-boue, Dérailleur, Rayon, Cadre, Casque
+Sport | Football, Rugby, Basket, Handball, Volley, Water-polo, Football américain, Hockey sur gazon, Netball, Futsal
+Sport | Boxe, Judo, Karaté, Lutte, Taekwondo, MMA, Escrime, Sumo, Aïkido, Kung-fu, Capoeira, Jiu-jitsu, Kickboxing
+Sport | Ski, Snowboard, Luge, Patinage, Hockey sur glace, Biathlon, Bobsleigh, Curling, Ski de fond, Saut à ski, Raquettes
+Sport | Golf, Pétanque, Bowling, Fléchettes, Tir à l'arc, Billard, Palet, Croquet, Molkky, Cornhole
+Sport | Échecs, Dames, Scrabble, Monopoly, Cluedo, Risk, Backgammon, Uno, Trivial Pursuit, Puissance 4, Jenga, Tarot, Belote, Poker, Solitaire
+Danse | Valse, Tango, Salsa, Hip-hop, Breakdance, Flamenco, Samba, Cha-cha-cha, Rock acrobatique, Danse classique, Claquettes, Zumba, Twerk, Madison
+Musique | Guitare, Violon, Violoncelle, Harpe, Banjo, Ukulélé, Contrebasse, Mandoline, Sitar, Balalaïka, Luth, Cithare
+Musique | Flûte, Clarinette, Saxophone, Trompette, Trombone, Hautbois, Cor, Tuba, Cornemuse, Harmonica, Flûte de pan, Basson
+Musique | Rock, Jazz, Rap, Reggae, Blues, Métal, Électro, Classique, Country, Funk, Soul, Disco, Punk, Techno, Gospel, Opéra, Salsa, K-pop
+Objets | Casserole, Poêle, Marmite, Louche, Spatule, Fouet, Passoire, Râpe, Cocotte, Écumoire, Rouleau à pâtisserie, Moule à gâteau, Planche à découper, Économe
+Objets | Frigo, Congélateur, Four, Micro-ondes, Lave-vaisselle, Machine à laver, Aspirateur, Grille-pain, Mixeur, Sèche-linge, Robot ménager, Bouilloire, Cafetière, Friteuse, Hotte
+Objets | Chaise, Tabouret, Fauteuil, Canapé, Table, Bureau, Commode, Armoire, Étagère, Lit, Buffet, Bibliothèque, Table basse, Banc, Pouf, Transat
+Objets | Marteau, Tournevis, Pince, Scie, Perceuse, Clé à molette, Niveau, Ponceuse, Burin, Lime, Étau, Visseuse, Mètre ruban, Cutter, Chalumeau
+Objets | Stylo, Crayon, Feutre, Marqueur, Gomme, Règle, Ciseaux, Colle, Agrafeuse, Surligneur, Compas, Équerre, Taille-crayon, Trombone, Punaise, Scotch, Perforatrice
+Jardin | Arrosoir, Râteau, Bêche, Sécateur, Tondeuse, Brouette, Tuyau d'arrosage, Serre, Pelle, Binette, Taille-haie, Composteur, Épouvantail, Nichoir
+Maquillage | Rouge à lèvres, Mascara, Fond de teint, Vernis à ongles, Fard à paupières, Blush, Eye-liner, Crayon à sourcils, Anticernes, Poudre
+Bébé | Biberon, Tétine, Couche, Poussette, Berceau, Hochet, Body, Bavoir, Doudou, Table à langer, Porte-bébé, Chaise haute
+Camping | Tente, Sac de couchage, Réchaud, Lampe torche, Boussole, Gourde, Hamac, Matelas gonflable, Glacière, Canif, Feu de camp, Piquet
+Plage | Parasol, Serviette de plage, Bouée, Palmes, Masque de plongée, Tuba, Château de sable, Crème solaire, Transat, Ballon de plage, Seau et pelle, Paréo
+Vêtements | Chemise, T-shirt, Pull, Sweat, Débardeur, Polo, Gilet, Chemisier, Tunique, Marcel, Col roulé, Cardigan, Body, Crop top
+Vêtements | Basket, Botte, Sandale, Escarpin, Mocassin, Tong, Chausson, Ballerine, Espadrille, Bottine, Sabot, Chaussure de sécurité, Chaussure de ski, Crampons
+Vêtements | Bonnet, Casquette, Chapeau, Écharpe, Foulard, Gant, Ceinture, Cravate, Béret, Bandana, Moufle, Cache-oreilles, Haut-de-forme, Sombrero, Turban
+Travail | Blouse, Bleu de travail, Casque de chantier, Gilet jaune, Tablier, Uniforme, Combinaison, Salopette, Charlotte, Masque, Gants de protection
+Géographie | France, Espagne, Italie, Allemagne, Portugal, Grèce, Suède, Pologne, Belgique, Suisse, Autriche, Norvège, Irlande, Pays-Bas, Danemark, Croatie
+Géographie | Japon, Chine, Inde, Brésil, Canada, Mexique, Australie, Égypte, Maroc, Russie, Argentine, Kenya, Thaïlande, Vietnam, Pérou, Islande
+Géographie | Paris, Lyon, Marseille, Bordeaux, Lille, Toulouse, Nantes, Strasbourg, Nice, Rennes, Montpellier, Grenoble, Brest, Reims
+Géographie | Londres, Berlin, Madrid, Rome, Lisbonne, Vienne, Athènes, Dublin, Oslo, Prague, Amsterdam, Bruxelles, Copenhague, Varsovie
+Géographie | New York, Tokyo, Pékin, Sydney, Rio de Janeiro, Le Caire, Montréal, Dubaï, Bangkok, Los Angeles, Istanbul, Mexico
+Géographie | Tour Eiffel, Colisée, Big Ben, Statue de la Liberté, Pyramides de Gizeh, Taj Mahal, Sagrada Familia, Machu Picchu, Muraille de Chine, Acropole, Mont Saint-Michel, Tour de Pise
+Géographie | Atlantique, Pacifique, Méditerranée, Mer Rouge, Mer Noire, Manche, Baltique, Mer du Nord, Mer Caspienne, Mer Morte
+Géographie | Alpes, Pyrénées, Himalaya, Andes, Rocheuses, Everest, Mont Blanc, Kilimandjaro, Vosges, Jura, Massif central, Fuji
+Géographie | Seine, Loire, Rhône, Garonne, Nil, Amazone, Danube, Mississippi, Tamise, Gange, Rhin, Volga
+Géographie | Continent, Pays, Région, Département, Ville, Village, Quartier, Hameau, Capitale, Banlieue, Province, Commune
+Géographie | Sahara, Amazonie, Antarctique, Arctique, Toundra, Steppe, Taïga, Savane, Banquise, Oasis
+Langues | Français, Anglais, Espagnol, Allemand, Italien, Chinois, Japonais, Russe, Arabe, Portugais, Néerlandais, Suédois, Grec, Latin
+Mythologie | Zeus, Poséidon, Hadès, Athéna, Apollon, Arès, Aphrodite, Hermès, Artémis, Héra, Dionysos, Héphaïstos
+Mythologie | Odin, Thor, Loki, Freyja, Heimdall, Valhalla, Ragnarök, Yggdrasil, Valkyrie, Fenrir
+Mythologie | Hercule, Achille, Ulysse, Persée, Thésée, Icare, Prométhée, Midas, Narcisse, Œdipe
+Contes | Cendrillon, Blanche-Neige, Le Petit Chaperon rouge, La Belle au bois dormant, Pinocchio, Hansel et Gretel, Le Petit Poucet, Le Chat botté, Raiponce, La Petite Sirène, Peter Pan, Alice au pays des merveilles
+Cinéma | Comédie, Thriller, Horreur, Science-fiction, Western, Policier, Drame, Documentaire, Romance, Comédie musicale, Film d'animation, Film catastrophe, Péplum, Film d'espionnage
+Cinéma | Réalisateur, Producteur, Cadreur, Monteur, Scénariste, Maquilleur, Cascadeur, Costumier, Ingénieur du son, Figurant, Doubleur, Décorateur
+Cinéma | Écran, Projecteur, Popcorn, Bande-annonce, Générique, Sous-titres, Ticket, Séance, Rangée, 3D
+Télévision | Série, Feuilleton, Téléréalité, Journal télévisé, Jeu télévisé, Dessin animé, Talk-show, Émission de cuisine, Météo, Publicité, Retransmission sportive
+Théâtre | Rideau, Coulisses, Scène, Loge, Costume, Souffleur, Réplique, Entracte, Applaudissements, Balcon, Orchestre, Mise en scène
+Cirque | Clown, Trapéziste, Jongleur, Dompteur, Acrobate, Funambule, Contorsionniste, Chapiteau, Piste, Monocycle, Cracheur de feu
+Fête foraine | Grande roue, Manège, Auto-tamponneuse, Montagnes russes, Barbe à papa, Tir à la carabine, Pêche aux canards, Train fantôme, Pomme d'amour, Stand de tir, Chamboule-tout
+Jeux d'enfance | Cache-cache, Chat perché, Marelle, Corde à sauter, Colin-maillard, Chaises musicales, Un deux trois soleil, Saute-mouton, Élastique, Béret, Épervier
+Jouets | Poupée, Peluche, Ballon, Puzzle, Lego, Petite voiture, Toupie, Yoyo, Cerf-volant, Billes, Trampoline, Cheval à bascule, Kaléidoscope, Circuit de train
+Jeux vidéo | PlayStation, Xbox, Nintendo Switch, Game Boy, Arcade, Steam Deck, Manette, Casque VR, Borne d'arcade
+Littérature | Roman, Nouvelle, Poème, Pièce de théâtre, Essai, Biographie, Conte, Fable, Bande dessinée, Manga, Recueil, Épopée
+Presse | Journal, Magazine, Revue, Quotidien, Hebdomadaire, Gazette, Éditorial, Interview, Reportage, Chronique, Petites annonces
+Couleurs | Rouge, Bleu, Vert, Jaune, Orange, Violet, Rose, Marron, Gris, Noir, Blanc, Turquoise, Beige, Bordeaux, Kaki, Indigo
+Formes | Cercle, Carré, Triangle, Rectangle, Losange, Ovale, Étoile, Hexagone, Cube, Sphère, Pyramide, Cylindre, Cône, Spirale
+Matériaux | Bois, Métal, Plastique, Verre, Béton, Tissu, Cuir, Caoutchouc, Carton, Papier, Marbre, Céramique, Laine, Soie, Velours, Lin
+Mesures | Mètre, Kilomètre, Centimètre, Litre, Gramme, Kilo, Tonne, Hectare, Degré, Watt, Volt, Nœud, Mille marin
+Mathématiques | Addition, Soustraction, Multiplication, Division, Fraction, Pourcentage, Équation, Racine carrée, Géométrie, Statistique, Probabilité, Moyenne
+Pharmacie | Sirop, Comprimé, Gélule, Pommade, Pansement, Seringue, Thermomètre, Vitamine, Antibiotique, Aspirine, Collyre, Attelle
+Hôpital | Urgences, Bloc opératoire, Brancard, Perfusion, Radiographie, Ordonnance, Salle d'attente, Anesthésie, Scanner, Plâtre, Stéthoscope, Blouse blanche
+Police | Menottes, Sirène, Uniforme, Badge, Interrogatoire, Cellule, Enquête, Patrouille, Radar, Empreinte, Portrait-robot, Mandat
+Justice | Procès, Verdict, Témoin, Jury, Plaidoirie, Preuve, Sentence, Appel, Serment, Barreau, Audience, Acquittement
+Armée | Soldat, Général, Capitaine, Sergent, Colonel, Lieutenant, Caporal, Amiral, Commandant, Recrue, Déserteur, Sentinelle
+Noblesse | Roi, Reine, Prince, Princesse, Duc, Comte, Baron, Chevalier, Empereur, Marquis, Vicomte, Régent, Dauphin
+Religion | Église, Mosquée, Synagogue, Temple, Monastère, Chapelle, Abbaye, Basilique, Cloître, Pagode, Sanctuaire, Crypte
+Aéroport | Billet, Passeport, Valise, Douane, Embarquement, Décollage, Atterrissage, Hublot, Tapis à bagages, Escale, Piste, Tour de contrôle, Turbulence
+Hôtel | Réception, Chambre, Clé magnétique, Petit-déjeuner, Piscine, Spa, Concierge, Room service, Suite, Minibar, Ascenseur, Femme de chambre
+Restaurant | Menu, Carte, Addition, Pourboire, Entrée, Plat, Dessert, Apéritif, Digestif, Réservation, Nappe, Chef, Terrasse, Ardoise
+Banque | Compte, Carte bancaire, Chèque, Distributeur, Crédit, Coffre-fort, Guichet, Découvert, Virement, Relevé, Épargne, Intérêts
+Poste | Lettre, Colis, Timbre, Enveloppe, Boîte aux lettres, Recommandé, Carte postale, Affranchissement, Tri, Tournée
+Moyen Âge | Château fort, Douves, Donjon, Catapulte, Armure, Épée, Bouclier, Arbalète, Tournoi, Pont-levis, Herse, Meurtrière, Heaume, Lance
+Égypte antique | Pyramide, Sphinx, Momie, Hiéroglyphe, Pharaon, Sarcophage, Scarabée, Papyrus, Obélisque, Temple, Nil, Sceptre
+Préhistoire | Dinosaure, Mammouth, Silex, Grotte, Massue, Tigre à dents de sabre, Homme des cavernes, Peinture rupestre, Feu, Biface, Dolmen, Menhir
+Far West | Shérif, Saloon, Duel, Diligence, Lasso, Éperon, Rodéo, Ranch, Chercheur d'or, Hors-la-loi, Colt, Étoile de shérif
+Pirates | Trésor, Carte au trésor, Perroquet, Jambe de bois, Drapeau noir, Abordage, Boussole, Île déserte, Cache-œil, Sabre, Galion, Planche, Cale, Mousse
+Espace | Astronaute, Fusée, Navette, Satellite, Station spatiale, Combinaison spatiale, Rover, Apesanteur, Cosmonaute, Module, Rampe de lancement, Sas
+Écologie | Recyclage, Compost, Panneau solaire, Éolienne, Tri sélectif, Pollution, Déforestation, Réchauffement, Covoiturage, Zéro déchet, Biodiversité, Empreinte carbone
+Énergie | Électricité, Gaz, Pétrole, Charbon, Nucléaire, Solaire, Éolien, Hydraulique, Géothermie, Biomasse, Batterie, Hydrogène
+Informatique | Logiciel, Application, Navigateur, Système d'exploitation, Base de données, Serveur, Fichier, Dossier, Raccourci, Sauvegarde, Pare-feu, Algorithme
+Caractère | Timide, Bavard, Généreux, Radin, Curieux, Têtu, Patient, Colérique, Drôle, Rêveur, Maladroit, Perfectionniste, Gourmand, Distrait
+Mariage | Robe de mariée, Alliance, Témoin, Discours, Pièce montée, Bouquet, Lune de miel, Demoiselle d'honneur, Faire-part, Première danse, Riz, Voile
+Superstition | Trèfle à quatre feuilles, Fer à cheval, Chat noir, Échelle, Miroir brisé, Étoile filante, Patte de lapin, Vendredi 13, Sel renversé, Toucher du bois
+Table | Nappe, Serviette, Carafe, Salière, Poivrier, Chandelier, Sous-plat, Corbeille à pain, Set de table, Tire-bouchon, Décapsuleur
+Métiers anciens | Forgeron, Tonnelier, Cordonnier, Tailleur, Meunier, Charron, Maréchal-ferrant, Verrier, Potier, Tisserand, Horloger, Relieur
+Bureau | Imprimante, Photocopieuse, Classeur, Tampon, Post-it, Corbeille, Chemise cartonnée, Machine à café, Salle de réunion, Badge, Open space
+Cheveux | Blond, Brun, Roux, Châtain, Gris, Chauve, Frisé, Raide, Ondulé, Coloré
+Bijouterie | Or, Argent, Platine, Diamant, Perle, Rubis, Saphir, Émeraude, Améthyste, Topaze, Jade, Opale
+Sensations | Chaud, Froid, Tiède, Brûlant, Glacé, Humide, Sec, Doux, Rugueux, Piquant, Collant, Glissant
+Goûts | Sucré, Salé, Amer, Acide, Épicé, Fade, Aigre, Fumé, Umami, Poivré
+Sons | Sifflement, Grincement, Claquement, Bourdonnement, Tic-tac, Sonnerie, Applaudissement, Tonnerre, Craquement, Clapotis
+Lieux | Supermarché, Épicerie, Boulangerie, Boucherie, Pharmacie, Librairie, Fleuriste, Quincaillerie, Poissonnerie, Crémerie, Tabac, Opticien, Bijouterie, Animalerie, Droguerie
+Lieux | Restaurant, Bar, Café, Boîte de nuit, Cinéma, Théâtre, Opéra, Casino, Brasserie, Pub, Salle de concert, Bowling, Karaoké, Guinguette
+Lieux | Hôpital, École, Université, Mairie, Commissariat, Prison, Tribunal, Caserne, Ambassade, Préfecture, Poste, Crèche, Collège, Lycée
+Lieux | Plage, Piscine, Parc, Jardin, Zoo, Aquarium, Fête foraine, Parc d'attractions, Patinoire, Bois, Aire de jeux, Skatepark, Terrain de sport
+Lieux | Cuisine, Salon, Chambre, Salle de bain, Garage, Grenier, Véranda, Couloir, Buanderie, Dressing, Bureau, Salle à manger, Cellier, Sous-sol
+Lieux | Forêt, Jungle, Désert, Savane, Montagne, Colline, Vallée, Plaine, Marais, Toundra, Prairie, Canyon, Plateau, Clairière, Gorge
+Lieux | Mer, Océan, Lac, Rivière, Fleuve, Étang, Cascade, Torrent, Ruisseau, Canal, Delta, Estuaire, Source, Geyser, Rapides
+Métiers | Médecin, Infirmier, Chirurgien, Dentiste, Pharmacien, Vétérinaire, Kinésithérapeute, Sage-femme, Radiologue, Ophtalmologue, Psychiatre, Orthophoniste, Podologue, Anesthésiste
+Métiers | Cuisinier, Pâtissier, Boulanger, Boucher, Serveur, Barman, Sommelier, Traiteur, Chocolatier, Fromager, Glacier, Pizzaiolo, Plongeur, Maître d'hôtel
+Métiers | Maçon, Menuisier, Plombier, Électricien, Peintre en bâtiment, Couvreur, Carreleur, Architecte, Grutier, Charpentier, Serrurier, Vitrier, Terrassier, Géomètre
+Métiers | Acteur, Chanteur, Danseur, Sculpteur, Écrivain, Photographe, Réalisateur, Illustrateur, Humoriste, Compositeur, Chorégraphe, Graphiste, Céramiste, Calligraphe
+Métiers | Pilote, Chauffeur, Conducteur, Marin, Steward, Contrôleur, Livreur, Facteur, Aiguilleur, Cheminot, Routier, Batelier, Coursier, Déménageur
+Métiers | Agriculteur, Éleveur, Jardinier, Fleuriste, Pêcheur, Bûcheron, Berger, Vigneron, Apiculteur, Ostréiculteur, Forestier, Maraîcher, Sylviculteur
+Métiers | Comptable, Secrétaire, Banquier, Informaticien, Commercial, Consultant, Journaliste, Traducteur, Assureur, Recruteur, Statisticien, Analyste
+Nature | Pluie, Neige, Grêle, Brouillard, Orage, Tempête, Vent, Canicule, Verglas, Bruine, Rosée, Givre, Averse, Mousson, Blizzard, Sécheresse
+Nature | Chêne, Sapin, Bouleau, Saule, Peuplier, Platane, Olivier, Palmier, Érable, Cyprès, Hêtre, Frêne, Marronnier, Tilleul, Baobab, Séquoia
+Nature | Rose, Tulipe, Marguerite, Tournesol, Orchidée, Lilas, Pivoine, Jonquille, Coquelicot, Muguet, Violette, Iris, Lavande, Hortensia, Camélia, Dahlia
+Fiction | Vampire, Zombie, Loup-garou, Fantôme, Momie, Squelette, Ogre, Troll, Croque-mitaine, Golem, Goule, Spectre, Banshee, Gargouille
+Fiction | Dragon, Licorne, Sirène, Phénix, Griffon, Centaure, Minotaure, Yéti, Kraken, Chimère, Hydre, Cyclope, Basilic, Pégase, Sphinx
+Fiction | Super-héros, Chevalier, Samouraï, Ninja, Pirate, Cow-boy, Gladiateur, Mousquetaire, Viking, Spartiate, Légionnaire, Croisé, Corsaire, Barbare
+Numérique | Instagram, TikTok, Snapchat, Facebook, Twitter, LinkedIn, Pinterest, Discord, Reddit, WhatsApp, Telegram, BeReal, Twitch, YouTube
+Numérique | Ordinateur, Tablette, Téléphone, Console, Clavier, Souris, Écran, Imprimante, Casque, Webcam, Enceinte, Disque dur, Clé USB, Chargeur, Routeur, Montre connectée
+Corps | Œil, Nez, Bouche, Oreille, Sourcil, Menton, Joue, Front, Lèvre, Langue, Dent, Cil, Fossette, Narine, Mâchoire
+Corps | Bras, Jambe, Main, Pied, Doigt, Orteil, Coude, Genou, Épaule, Cheville, Poignet, Hanche, Talon, Mollet, Cuisse, Nuque, Dos, Ventre
+Concepts | Joie, Tristesse, Colère, Peur, Jalousie, Honte, Fierté, Surprise, Dégoût, Ennui, Nostalgie, Soulagement, Impatience, Gratitude, Culpabilité, Espoir
+Concepts | Amour, Amitié, Rivalité, Confiance, Trahison, Réconciliation, Rupture, Complicité, Séduction, Coup de foudre, Jalousie, Fidélité, Dispute
+Événements | Noël, Pâques, Halloween, Nouvel An, Carnaval, Saint-Valentin, Anniversaire, Mariage, Poisson d'avril, Fête des mères, Fête de la musique, 14 Juillet, Thanksgiving, Épiphanie, Chandeleur
+Événements | Concert, Festival, Spectacle, Match, Exposition, Conférence, Salon, Vernissage, Avant-première, Compétition, Tournoi, Défilé de mode
+École | Mathématiques, Histoire, Géographie, Physique, Chimie, Biologie, Philosophie, Anglais, Sport, Musique, Arts plastiques, Technologie, Économie, Latin, Informatique
+École | Récréation, Cantine, Devoirs, Contrôle, Rentrée, Vacances, Conseil de classe, Colle, Bulletin, Sortie scolaire, Exposé, Brevet, Baccalauréat, Internat
+Maison | Porte, Fenêtre, Volet, Rideau, Escalier, Balcon, Terrasse, Toit, Cheminée, Portail, Véranda, Mezzanine, Lucarne, Gouttière, Palier, Perron
+Maison | Tapis, Coussin, Couverture, Oreiller, Drap, Couette, Matelas, Édredon, Plaid, Traversin, Housse, Descente de lit
+Sport | Natation, Plongée, Surf, Kitesurf, Aviron, Voile, Paddle, Plongeon, Nage synchronisée, Rafting, Canyoning, Ski nautique, Apnée, Bodyboard
+Sport | Marathon, Sprint, Saut en longueur, Saut à la perche, Lancer de poids, Haies, Javelot, Triathlon, Décathlon, Cross, Marche athlétique, Relais, Saut en hauteur, Disque
+Sport | Escalade, Randonnée, Spéléologie, Alpinisme, Via ferrata, Parapente, Saut à l'élastique, Course d'orientation, Trail, Slackline, Wingsuit
+Transport | Train, Métro, Tramway, TGV, Téléphérique, Funiculaire, Monorail, RER, Train à vapeur, Wagon, Locomotive, Quai
+Objets | Sac à dos, Valise, Cartable, Sacoche, Portefeuille, Trousse, Panier, Coffre, Besace, Pochette, Malle, Sac banane, Porte-monnaie, Cabas
+Objets | Livre, Magazine, Journal, Bande dessinée, Roman, Dictionnaire, Cahier, Agenda, Carnet, Album photo, Atlas, Encyclopédie, Guide de voyage, Recueil
+Objets | Lampe, Bougie, Lampadaire, Torche, Néon, Lustre, Guirlande, Veilleuse, Applique, Chandelier, Lanterne, Spot
+Objets | Clé, Cadenas, Serrure, Verrou, Chaîne, Menottes, Coffre-fort, Digicode, Alarme, Badge, Trousseau, Loquet
+Objets | Balai, Serpillière, Éponge, Chiffon, Plumeau, Seau, Balayette, Pelle à poussière, Gant de ménage, Produit vaisselle, Lingette, Bassine
+Boisson | Mojito, Piña colada, Margarita, Spritz, Sangria, Punch, Cosmopolitan, Bloody Mary, Caïpirinha, Daiquiri, Kir, Cuba libre, Gin tonic, Mimosa
+Nourriture | Camembert, Roquefort, Comté, Brie, Mozzarella, Parmesan, Gruyère, Feta, Reblochon, Chèvre, Bleu, Emmental, Cheddar, Ricotta, Mascarpone
+Nourriture | Sushi, Paella, Couscous, Ramen, Chili, Tajine, Falafel, Dim sum, Pad thaï, Fish and chips, Goulash, Moussaka, Bibimbap, Ceviche, Empanada, Poke bowl
+Nourriture | Bonbon, Chewing-gum, Sucette, Caramel, Nougat, Réglisse, Guimauve, Praline, Dragée, Berlingot, Calisson, Bêtise, Fraise Tagada, Carambar
+Nourriture | Burger, Frites, Hot-dog, Pizza, Kebab, Tacos, Nuggets, Sandwich, Wrap, Croque-monsieur, Panini, Hamburger, Bagel, Quesadilla, Club sandwich
+Animaux | Escargot, Limace, Ver de terre, Chenille, Mille-pattes, Araignée, Scorpion, Tique, Cloporte, Perce-oreille, Mante religieuse, Scarabée, Hanneton, Bousier
+Animaux | Souris, Rat, Castor, Marmotte, Taupe, Belette, Loutre, Hermine, Ragondin, Musaraigne, Campagnol, Chauve-souris
+Famille | Père, Mère, Frère, Sœur, Grand-père, Grand-mère, Oncle, Tante, Cousin, Neveu, Nièce, Filleul, Beau-frère, Belle-mère, Parrain, Jumeau
+Entourage | Voisin, Ami, Collègue, Inconnu, Camarade, Copain, Connaissance, Confident, Rival, Complice
+Bébés animaux | Chiot, Chaton, Poulain, Veau, Agneau, Poussin, Faon, Ourson, Louveteau, Éléphanteau, Caneton, Chevreau, Porcelet, Girafon
+Cris d'animaux | Aboyer, Miauler, Hennir, Meugler, Bêler, Grogner, Rugir, Hurler, Croasser, Siffler, Caqueter, Braire, Barrir, Coasser
+Habitats animaux | Nid, Terrier, Ruche, Tanière, Fourmilière, Toile d'araignée, Étable, Niche, Cage, Clapier, Poulailler, Aquarium
+Dinosaures | Tyrannosaure, Diplodocus, Tricératops, Vélociraptor, Stégosaure, Ptérodactyle, Brachiosaure, Ankylosaure, Spinosaure
+Races de chiens | Labrador, Berger allemand, Caniche, Bouledogue, Chihuahua, Golden retriever, Husky, Beagle, Dalmatien, Teckel, Border collie, Rottweiler
+Races de chats | Siamois, Persan, Maine coon, Sphynx, Bengal, Chartreux, Angora, Birman, Ragdoll
+Champignons | Cèpe, Girolle, Morille, Truffe, Champignon de Paris, Pleurote, Amanite, Bolet, Chanterelle, Shiitaké
+Céréales | Blé, Maïs, Orge, Avoine, Seigle, Riz, Millet, Sarrasin, Épeautre, Quinoa
+Arbres fruitiers | Pommier, Poirier, Cerisier, Prunier, Abricotier, Oranger, Figuier, Amandier, Noyer, Olivier, Citronnier, Pêcher
+Plantes d'intérieur | Cactus, Ficus, Monstera, Orchidée, Aloe vera, Yucca, Bonsaï, Fougère, Philodendron, Plante araignée
+Cuisson | Bouillir, Frire, Griller, Rôtir, Mijoter, Cuire à la vapeur, Braiser, Poêler, Fumer, Mariner, Flamber, Gratiner, Pocher, Confire
+Couture | Aiguille, Fil, Dé à coudre, Machine à coudre, Patron, Épingle, Ourlet, Bouton, Fermeture éclair, Ciseaux de couture, Mètre ruban, Bobine, Tricot, Crochet
+Peinture | Pinceau, Palette, Chevalet, Toile, Aquarelle, Gouache, Fusain, Pastel, Vernis, Acrylique, Spatule, Esquisse
+Photographie | Objectif, Flash, Trépied, Pellicule, Mise au point, Zoom, Obturateur, Filtre, Cadrage, Retouche, Studio, Négatif
+Parfumerie | Eau de toilette, Flacon, Vaporisateur, Fragrance, Musc, Vanille, Bergamote, Santal, Patchouli, Ambre
+Bien-être | Sauna, Hammam, Jacuzzi, Massage, Gommage, Bain de boue, Réflexologie, Méditation, Sophrologie, Acupuncture
+Coiffure | Sèche-cheveux, Lisseur, Boucleur, Shampoing, Tondeuse, Bigoudi, Laque, Brushing, Mèche, Balayage, Peigne, Bac à shampoing
+Dentiste | Fraise, Plombage, Bridge, Appareil dentaire, Détartrage, Carie, Couronne, Implant, Gouttière, Roulette
+Optique | Lunettes, Lentilles de contact, Monture, Verres, Étui, Loupe, Jumelles, Microscope, Lunettes de soleil, Binocle
+Premiers secours | Bouche-à-bouche, Massage cardiaque, Garrot, Attelle, Défibrillateur, Compresse, Bandage, Écharpe, Couverture de survie
+Administratif | Formulaire, Justificatif, Attestation, Carte d'identité, Passeport, Permis de conduire, Acte de naissance, Facture, Contrat, Procuration, Certificat
+Impôts | Déclaration, Amende, Contravention, Remboursement, Allocation, Cotisation, Prélèvement, Redressement, Exonération
+Immobilier | Loyer, Caution, Bail, Agence, Visite, État des lieux, Charges, Syndic, Copropriété, Hypothèque, Notaire, Diagnostic
+Assurance | Sinistre, Franchise, Expert, Indemnisation, Prime, Constat, Garantie, Résiliation, Bonus, Malus
+Commerce | Soldes, Promotion, Réduction, Ticket de caisse, Caddie, Caisse, Rayon, Code-barres, Carte de fidélité, Vitrine, Étiquette, Inventaire
+Livraison | Colis, Suivi, Point relais, Retour, Emballage, Bon de commande, Transporteur, Accusé de réception, Frais de port
+Marché | Étal, Primeur, Balance, Cageot, Marchand, Crieur, Halle, Panier en osier, Monnaie
+Vacances | Bagage, Réservation, Guide touristique, Excursion, Souvenir, Carte postale, Décalage horaire, Farniente, Itinéraire, Visa, Location
+Croisière | Cabine, Pont supérieur, Buffet, Escale, Capitaine, Bouée de sauvetage, Transat, Passerelle, Sirène de brume
+Sports d'hiver | Remontée mécanique, Télésiège, Piste noire, Forfait, Moniteur, Chalet, Après-ski, Hors-piste, Poudreuse, Tire-fesses, Anorak
+Randonnée | Sentier, Balise, Refuge, Bâtons de marche, Carte IGN, Dénivelé, Boussole, Gourde, Ampoule, Bivouac
+Fête de village | Bal, Feu d'artifice, Buvette, Tombola, Fanfare, Brocante, Concours de pétanque, Barbecue, Guinguette, Lampion
+Brocante | Antiquité, Enchère, Vide-grenier, Marchandage, Bibelot, Chineur, Lot, Estimation, Commode ancienne
+Noël | Sapin, Guirlande, Boule de Noël, Crèche, Père Noël, Traîneau, Renne, Bûche, Chaussette, Marché de Noël, Papillote, Santon
+Halloween | Citrouille, Déguisement, Bonbons, Toile d'araignée, Cimetière, Chauve-souris, Costume, Épouvante, Maison hantée, Sorcière
+Nouvel An | Compte à rebours, Confettis, Serpentin, Cotillon, Résolution, Feu d'artifice, Champagne, Minuit, Réveillon
+Anniversaire | Bougie, Gâteau d'anniversaire, Cadeau, Ballon, Invitation, Surprise, Chapeau de fête, Piñata, Carte de vœux
+Pâques | Cloche, Œuf en chocolat, Chasse aux œufs, Panier, Lapin de Pâques, Poule en chocolat, Cocotte
+Université | Amphithéâtre, Partiel, Mémoire, Thèse, Stage, Campus, Crédits, Doctorat, Licence, Master, Rattrapage, Cité universitaire
+Travail | Réunion, Pause café, Télétravail, Congé, Entretien annuel, Promotion, Démission, Heures supplémentaires, Pointeuse, Prime, Syndicat, Préavis
+Politique | Élection, Vote, Urne, Bulletin, Campagne, Sondage, Débat, Mandat, Majorité, Opposition, Discours, Meeting
+Arbitrage | Carton jaune, Carton rouge, Penalty, Hors-jeu, Coup franc, Corner, Touche, Prolongation, Tirs au but, Sifflet, Chronomètre, Feuille de match
+Équipement sportif | Ballon, Raquette, Filet, But, Panier de basket, Maillot, Crampons, Protège-tibias, Gourde, Sifflet, Brassard, Tapis de sol
+Fitness | Haltère, Tapis de course, Vélo elliptique, Rameur, Banc de musculation, Kettlebell, Élastique, Corde à sauter, Barre de traction, Step
+Sports mécaniques | Formule 1, Rallye, MotoGP, Karting, Motocross, Endurance, Drift, Stock-car, Trial
+Cyclisme | Tour de France, Maillot jaune, Peloton, Échappée, Contre-la-montre, Étape, Col, Sprint, Dossard, Ravitaillement
+Jeux Olympiques | Médaille d'or, Flamme olympique, Podium, Anneaux, Cérémonie d'ouverture, Village olympique, Relais de la flamme, Hymne, Record du monde
+Jeux de cartes | Belote, Tarot, Poker, Rami, Bataille, Solitaire, Président, Menteur, Huit américain, Réussite, Black-jack
+Cartes à jouer | As, Roi, Dame, Valet, Trèfle, Carreau, Pique, Joker, Atout, Paire, Quinte, Brelan
+Casino | Roulette, Machine à sous, Jetons, Croupier, Mise, Tapis vert, Jackpot, Bandit manchot, Dés, Cave
+Jeux de société | Loup-garou, Time's Up, Pictionary, Dixit, Catan, Carcassonne, Jungle Speed, Awalé, Petits chevaux, Bonne paye
+Casse-tête | Mots croisés, Sudoku, Mots fléchés, Rébus, Charade, Anagramme, Mots mêlés, Énigme, Labyrinthe, Rubik's cube
+Compositeurs | Mozart, Beethoven, Bach, Chopin, Vivaldi, Verdi, Debussy, Tchaïkovski, Schubert, Haydn, Ravel, Wagner
+Peintres | Picasso, Van Gogh, Monet, Dalí, Michel-Ange, Léonard de Vinci, Renoir, Matisse, Rembrandt, Cézanne, Klimt, Magritte
+Écrivains | Victor Hugo, Molière, Zola, Camus, Balzac, Baudelaire, Proust, Voltaire, Rousseau, Flaubert, Verne, Maupassant
+Scientifiques | Einstein, Newton, Marie Curie, Darwin, Galilée, Pasteur, Archimède, Tesla, Copernic, Mendeleïev
+Personnages historiques | Napoléon, Jeanne d'Arc, Jules César, Cléopâtre, Louis XIV, De Gaulle, Charlemagne, Vercingétorix, Christophe Colomb, Gandhi
+Inventions | Roue, Imprimerie, Ampoule, Téléphone, Internet, Vaccin, Boussole, Moteur à vapeur, Photographie, Réfrigérateur, Avion, Radio
+Époques | Préhistoire, Antiquité, Moyen Âge, Renaissance, Révolution française, Belle Époque, Années folles, Années 80, Siècle des Lumières
+Signes astrologiques | Bélier, Taureau, Gémeaux, Cancer, Lion, Vierge, Balance, Scorpion, Sagittaire, Capricorne, Verseau, Poissons
+Régions françaises | Bretagne, Normandie, Provence, Alsace, Corse, Auvergne, Savoie, Occitanie, Bourgogne, Picardie, Aquitaine, Camargue
+Vins | Bordeaux, Bourgogne, Beaujolais, Côtes du Rhône, Chablis, Sancerre, Muscadet, Chianti, Rioja, Riesling
+Outre-mer | Guadeloupe, Martinique, La Réunion, Guyane, Tahiti, Nouvelle-Calédonie, Mayotte, Saint-Pierre-et-Miquelon
+Marine | Ancre, Gouvernail, Mât, Hublot, Cabine, Hélice, Quille, Proue, Poupe, Cordage, Écoutille, Sextant
+Aviation | Cockpit, Aile, Réacteur, Train d'atterrissage, Fuselage, Radar, Aileron, Boîte noire, Pilote automatique, Carlingue
+Ferroviaire | Rail, Aiguillage, Passage à niveau, Wagon-lit, Composteur, Voie, Signal, Caténaire, Ballast, Autorail
+Chantier | Échafaudage, Bétonnière, Pelleteuse, Marteau-piqueur, Gravats, Palette, Truelle, Niveau à bulle, Bâche, Ciment
+Bâtiments de ferme | Grange, Étable, Silo, Écurie, Bergerie, Hangar, Serre, Puits, Abreuvoir, Meule de foin
+Apiculture | Miel, Cire, Propolis, Gelée royale, Ruche, Essaim, Enfumoir, Reine, Alvéole, Butineuse
+Météo instruments | Baromètre, Girouette, Anémomètre, Pluviomètre, Hygromètre, Station météo, Manche à air, Sonde
+Géologie | Cratère, Lave, Magma, Faille, Strate, Fossile, Tectonique, Sédiment, Éboulis, Stalactite, Stalagmite
+Internet | Forum, Blog, Commentaire, Like, Partage, Abonné, Notification, Hashtag, Fil d'actualité, Troll, Modérateur, Bannissement
+Streaming | Stream, Abonnement, Donation, Chat en direct, Raid, Clip, Émote, Rediffusion, Overlay, Alerte, Viewers
+Cybersécurité | Antivirus, Hameçonnage, Piratage, Authentification, Sauvegarde, Chiffrement, Rançongiciel, Faille, Cheval de Troie, Double authentification
+Technologies | Intelligence artificielle, Chatbot, Réalité virtuelle, Voiture autonome, Imprimante 3D, Objet connecté, Blockchain, Reconnaissance faciale, Assistant vocal
+Jeux vidéo célèbres | Minecraft, Fortnite, Zelda, Mario, Pokémon, Tetris, Among Us, Pac-Man, Sonic, Candy Crush, Sims, Angry Birds
+Métiers du numérique | Développeur, Designer, Community manager, Streamer, Youtubeur, Testeur de jeux, Chef de projet, Administrateur réseau, Data analyst
+Métiers de la musique | Guitariste, Batteur, Bassiste, DJ, Chef d'orchestre, Choriste, Ingénieur du son, Parolier, Luthier, Accordeur
+Magie | Tour de cartes, Lapin dans le chapeau, Disparition, Lévitation, Boîte à double fond, Prestidigitateur, Foulard, Colombe, Anneaux chinois
+Sommeil | Matelas, Réveil, Veilleuse, Boules Quiès, Masque de nuit, Berceuse, Grasse matinée, Oreiller, Somnifère
+Bricolage | Cheville, Vis, Clou, Écrou, Boulon, Rondelle, Charnière, Équerre, Mastic, Silicone, Papier de verre, Enduit
+Peinture en bâtiment | Rouleau, Pinceau plat, Bâche de protection, Ruban de masquage, Sous-couche, Lasure, Décapant, Nuancier, Pot de peinture
+Électricité | Prise, Interrupteur, Disjoncteur, Ampoule, Câble, Rallonge, Compteur, Fusible, Tableau électrique, Multiprise
+Plomberie | Robinet, Tuyau, Siphon, Joint, Chasse d'eau, Chauffe-eau, Évier, Douchette, Ventouse, Mitigeur
+Chauffage | Radiateur, Poêle à bois, Cheminée, Chaudière, Climatisation, Ventilateur, Thermostat, Bouillotte, Plancher chauffant
+Salle de bain | Baignoire, Douche, Lavabo, Toilettes, Bidet, Porte-serviette, Tapis de bain, Rideau de douche, Armoire à pharmacie
+Vaisselle | Assiette plate, Assiette creuse, Saladier, Plat à four, Ramequin, Théière, Cafetière, Sucrier, Beurrier, Carafe
+Petit-déjeuner | Bol, Tartine, Confiture, Jus, Croissant, Café au lait, Brioche, Œuf à la coque, Viennoiserie, Compote
+Pique-nique | Nappe à carreaux, Panier, Glacière, Sandwich, Thermos, Serviette en papier, Couverts jetables, Parasol, Fourmis
+Barbecue | Grille, Charbon, Allume-feu, Brochette, Merguez, Pince, Tablier, Marinade, Braises, Papillote
+Apéritif | Cacahuètes, Chips, Olives, Saucisson, Toast, Verrine, Tapenade, Cake salé, Cocktail, Glaçons
+Restaurant du monde | Bistrot, Trattoria, Izakaya, Taverne, Cantine, Food truck, Buffet, Rôtisserie, Crêperie, Pizzeria
+Desserts glacés | Cornet, Coupe glacée, Banana split, Vacherin, Bûche glacée, Sorbet, Parfait, Tiramisu glacé
+Boulangerie | Pétrin, Four à pain, Levain, Pelle à pain, Baguette tradition, Pain complet, Pain aux céréales, Fournil, Croûte, Mie
+Fruits secs | Raisin sec, Abricot sec, Pruneau, Datte, Figue séchée, Banane séchée, Cranberry, Mangue séchée
+Condiments | Cornichon, Câpre, Olive, Oignon confit, Citron confit, Pickles, Chutney, Wasabi, Raifort
+Viennoiseries | Croissant, Pain aux raisins, Chausson, Brioche suisse, Torsade, Chouquette, Kouign-amann, Palmier
+Herboristerie | Camomille, Verveine, Tilleul, Menthe poivrée, Valériane, Romarin, Sauge, Eucalyptus, Gingembre, Curcuma
+Fromages du monde | Gouda, Manchego, Pecorino, Halloumi, Stilton, Gorgonzola, Raclette, Munster, Tomme, Saint-Nectaire
+Charcuterie | Andouille, Terrine, Mortadelle, Coppa, Jambon cru, Lardon, Saucisse sèche, Galantine, Museau
+Poissonnerie | Bar, Dorade, Sole, Maquereau, Cabillaud, Lotte, Turbot, Rouget, Colin, Hareng
+Coquillages | Moule, Huître, Coquille Saint-Jacques, Palourde, Bulot, Bigorneau, Praire, Couteau, Ormeau
+Boissons chaudes du monde | Thé vert, Thé noir, Rooibos, Maté, Chaï, Matcha, Café turc, Ristretto, Irish coffee
+Sirops | Grenadine, Menthe, Fraise, Citron, Orgeat, Anis, Cassis, Pêche, Violette
+Animaux | Requin, Dauphin, Baleine, Orque, Phoque, Otarie, Méduse, Pieuvre, Raie, Espadon, Hippocampe, Étoile de mer, Crabe, Homard, Crevette, Murène, Narval, Lamantin, Calamar, Oursin
+Animaux | Abeille, Guêpe, Frelon, Fourmi, Moustique, Mouche, Coccinelle, Papillon, Libellule, Sauterelle, Criquet, Grillon, Cafard, Puce, Punaise, Luciole, Cigale, Charançon, Éphémère, Taon
+Animaux | Vache, Cochon, Mouton, Chèvre, Poule, Canard, Oie, Cheval, Âne, Dinde, Coq, Bélier, Taureau, Poney, Lama, Alpaga, Mulet, Oisillon, Pintade, Caille
+Nourriture | Gâteau, Tarte, Éclair, Mille-feuille, Macaron, Tiramisu, Cheesecake, Crème brûlée, Profiterole, Paris-Brest, Baba au rhum, Clafoutis, Flan, Cookie, Brownie, Charlotte, Opéra, Fondant, Cannelé, Madeleine, Financier
+Nourriture | Pomme, Poire, Pêche, Abricot, Prune, Cerise, Raisin, Figue, Nectarine, Coing, Mirabelle, Brugnon, Datte, Grenade, Kaki, Rhubarbe, Nèfle, Reine-claude
+Objets | Chaise, Tabouret, Fauteuil, Canapé, Table, Bureau, Commode, Armoire, Étagère, Lit, Buffet, Bibliothèque, Table basse, Banc, Pouf, Transat, Chaise longue, Vaisselier, Secrétaire, Berceau
+Objets | Frigo, Congélateur, Four, Micro-ondes, Lave-vaisselle, Machine à laver, Aspirateur, Grille-pain, Mixeur, Sèche-linge, Robot ménager, Bouilloire, Cafetière, Friteuse, Hotte, Centrifugeuse, Yaourtière, Gaufrier, Autocuiseur
+Objets | Stylo, Crayon, Feutre, Marqueur, Gomme, Règle, Ciseaux, Colle, Agrafeuse, Surligneur, Compas, Équerre, Taille-crayon, Trombone, Punaise, Scotch, Perforatrice, Rapporteur, Correcteur, Pochette plastique
+Lieux | Supermarché, Épicerie, Boulangerie, Boucherie, Pharmacie, Librairie, Fleuriste, Quincaillerie, Poissonnerie, Crémerie, Tabac, Opticien, Bijouterie, Animalerie, Droguerie, Papeterie, Cordonnerie, Pressing, Coiffeur, Kiosque
+Métiers | Médecin, Infirmier, Chirurgien, Dentiste, Pharmacien, Vétérinaire, Kinésithérapeute, Sage-femme, Radiologue, Ophtalmologue, Psychiatre, Orthophoniste, Podologue, Anesthésiste, Urgentiste, Cardiologue, Dermatologue, Diététicien
+Géographie | France, Espagne, Italie, Allemagne, Portugal, Grèce, Suède, Pologne, Belgique, Suisse, Autriche, Norvège, Irlande, Pays-Bas, Danemark, Croatie, Finlande, Hongrie, Roumanie, Écosse, Slovénie, Bulgarie
+Couleurs | Rouge, Bleu, Vert, Jaune, Orange, Violet, Rose, Marron, Gris, Noir, Blanc, Turquoise, Beige, Bordeaux, Kaki, Indigo, Mauve, Corail, Ocre, Fuchsia, Lavande, Émeraude
+Concepts | Joie, Tristesse, Colère, Peur, Jalousie, Honte, Fierté, Surprise, Dégoût, Ennui, Nostalgie, Soulagement, Impatience, Gratitude, Culpabilité, Espoir, Sérénité, Excitation, Déception, Admiration, Compassion
+Vêtements | Manteau, Veste, Blouson, Imperméable, Doudoune, Trench, Parka, Cape, Poncho, Anorak, Pardessus, Duffle-coat, Coupe-vent, Caban, Gabardine
+Nature | Rose, Tulipe, Marguerite, Tournesol, Orchidée, Lilas, Pivoine, Jonquille, Coquelicot, Muguet, Violette, Iris, Lavande, Hortensia, Camélia, Dahlia, Œillet, Glaïeul, Bleuet, Narcisse, Anémone
+Sport | Échecs, Dames, Scrabble, Monopoly, Cluedo, Risk, Backgammon, Uno, Trivial Pursuit, Puissance 4, Jenga, Tarot, Belote, Poker, Solitaire, Dominos, Mikado, Bataille navale, Petits chevaux, Yams
+Fiction | Dragon, Licorne, Sirène, Phénix, Griffon, Centaure, Minotaure, Yéti, Kraken, Chimère, Hydre, Cyclope, Pégase, Sphinx, Harpie, Gorgone, Chupacabra, Léviathan
+Corps | Bras, Jambe, Main, Pied, Doigt, Orteil, Coude, Genou, Épaule, Cheville, Poignet, Hanche, Talon, Mollet, Cuisse, Nuque, Dos, Ventre, Poitrine, Côte, Colonne vertébrale, Paume
+Transport | Voiture, Camion, Bus, Moto, Scooter, Camionnette, Taxi, Caravane, Tracteur, Quad, Buggy, Limousine, Bulldozer, Grue mobile, Autocar, Fourgonnette, Monospace, Cabriolet, Berline, Break
+Matériaux | Bois, Métal, Plastique, Verre, Béton, Tissu, Cuir, Caoutchouc, Carton, Papier, Marbre, Céramique, Laine, Soie, Velours, Lin, Coton, Acier, Aluminium, Liège, Bambou, Porcelaine
+Musique | Rock, Jazz, Rap, Reggae, Blues, Métal, Électro, Classique, Country, Funk, Soul, Disco, Punk, Techno, Gospel, Opéra, K-pop, Folk, Grunge, Bossa nova, Flamenco, Variété
+Numérique | Ordinateur, Tablette, Téléphone, Console, Clavier, Souris, Écran, Imprimante, Casque, Webcam, Enceinte, Disque dur, Clé USB, Chargeur, Routeur, Montre connectée, Scanner, Manette, Tapis de souris, Micro-casque
+`;
+
+window.UC_PAIRS = `
+Chat/Chien/Animaux
+Lion/Tigre/Animaux
+*Loup/Chien/Animaux
+Cheval/Âne/Animaux
+Vache/Chèvre/Animaux
+Poule/Canard/Animaux
+Requin/Dauphin/Animaux
+*Crocodile/Alligator/Animaux
+Abeille/Guêpe/Animaux
+Papillon/Libellule/Animaux
+Souris/Rat/Animaux
+Lapin/Lièvre/Animaux
+Éléphant/Rhinocéros/Animaux
+Girafe/Autruche/Animaux
+Singe/Gorille/Animaux
+Pingouin/Phoque/Animaux
+Araignée/Scorpion/Animaux
+Serpent/Anguille/Animaux
+Hibou/Aigle/Animaux
+*Grenouille/Crapaud/Animaux
+Ours/Panda/Animaux
+Écureuil/Hamster/Animaux
+Baleine/Cachalot/Animaux
+Fourmi/Termite/Animaux
+Pigeon/Mouette/Animaux
+Pizza/Tarte/Nourriture
+Burger/Sandwich/Nourriture
+*Crêpe/Pancake/Nourriture
+Pâtes/Riz/Nourriture
+Frites/Chips/Nourriture
+Chocolat/Caramel/Nourriture
+Glace/Sorbet/Nourriture
+Croissant/Pain au chocolat/Nourriture
+Baguette/Brioche/Nourriture
+Fromage/Beurre/Nourriture
+Yaourt/Fromage blanc/Nourriture
+Soupe/Bouillon/Nourriture
+Salade/Crudités/Nourriture
+Sushi/Maki/Nourriture
+Kebab/Tacos/Nourriture
+Raclette/Fondue/Nourriture
+Couscous/Paella/Nourriture
+Omelette/Quiche/Nourriture
+*Confiture/Miel/Nourriture
+Gâteau/Muffin/Nourriture
+Bonbon/Chewing-gum/Nourriture
+Pop-corn/Cacahuète/Nourriture
+Steak/Saucisse/Nourriture
+Jambon/Bacon/Nourriture
+Céréales/Granola/Nourriture
+Pomme/Poire/Nourriture
+Banane/Mangue/Nourriture
+Fraise/Framboise/Nourriture
+Citron/Orange/Nourriture
+Pastèque/Melon/Nourriture
+Tomate/Poivron/Nourriture
+Carotte/Navet/Nourriture
+Oignon/Ail/Nourriture
+Champignon/Truffe/Nourriture
+Café/Thé/Boisson
+Bière/Vin/Boisson
+Coca/Limonade/Boisson
+Jus d'orange/Smoothie/Boisson
+Eau/Eau gazeuse/Boisson
+Champagne/Cidre/Boisson
+Whisky/Rhum/Boisson
+Chocolat chaud/Cappuccino/Boisson
+Mojito/Piña colada/Boisson
+Voiture/Moto/Transport
+Vélo/Trottinette/Transport
+Train/Métro/Transport
+Avion/Hélicoptère/Transport
+Bateau/Sous-marin/Transport
+Bus/Tramway/Transport
+Camion/Camionnette/Transport
+Taxi/Uber/Transport
+*Fusée/Navette spatiale/Transport
+Skateboard/Rollers/Transport
+Montgolfière/Parachute/Transport
+Ambulance/Camion de pompier/Transport
+Football/Rugby/Sport
+Tennis/Badminton/Sport
+Basket/Handball/Sport
+Natation/Plongée/Sport
+Boxe/Karaté/Sport
+Ski/Snowboard/Sport
+Golf/Pétanque/Sport
+Escalade/Randonnée/Sport
+Marathon/Sprint/Sport
+Yoga/Pilates/Sport
+Surf/Kitesurf/Sport
+Volley/Beach-volley/Sport
+Échecs/Dames/Sport
+Formule 1/Rallye/Sport
+Gymnastique/Danse/Sport
+Musculation/Crossfit/Sport
+Guitare/Ukulélé/Musique
+Piano/Orgue/Musique
+Batterie/Percussions/Musique
+Violon/Alto/Musique
+Trompette/Saxophone/Musique
+Flûte/Clarinette/Musique
+Rap/Slam/Musique
+Rock/Métal/Musique
+Karaoké/Concert/Musique
+Casque/Écouteurs/Musique
+Téléphone/Tablette/Objets
+Ordinateur/Console/Objets
+Télévision/Projecteur/Objets
+Montre/Bracelet/Objets
+Lunettes/Masque/Objets
+Parapluie/Ombrelle/Objets
+Sac à dos/Valise/Objets
+Portefeuille/Trousse/Objets
+Clé/Cadenas/Objets
+Stylo/Crayon/Objets
+Livre/Magazine/Objets
+Cahier/Agenda/Objets
+Ciseaux/Cutter/Objets
+Marteau/Tournevis/Objets
+Balai/Aspirateur/Objets
+Miroir/Fenêtre/Objets
+Bougie/Lampe/Objets
+Oreiller/Couverture/Objets
+Brosse à dents/Peigne/Objets
+Savon/Shampooing/Objets
+Serviette/Peignoir/Objets
+Réveil/Chronomètre/Objets
+Appareil photo/Caméra/Objets
+Micro/Haut-parleur/Objets
+Chaise/Tabouret/Objets
+Canapé/Fauteuil/Objets
+Table/Bureau/Objets
+Frigo/Congélateur/Objets
+Four/Micro-ondes/Objets
+Machine à laver/Lave-vaisselle/Objets
+Escalier/Ascenseur/Lieux
+Plage/Piscine/Lieux
+Montagne/Colline/Lieux
+Forêt/Jungle/Lieux
+Désert/Savane/Lieux
+Île/Péninsule/Lieux
+Hôpital/Clinique/Lieux
+École/Université/Lieux
+Bibliothèque/Librairie/Lieux
+Musée/Galerie/Lieux
+Cinéma/Théâtre/Lieux
+Restaurant/Cantine/Lieux
+Bar/Boîte de nuit/Lieux
+Hôtel/Auberge/Lieux
+Supermarché/Épicerie/Lieux
+Parc/Jardin/Lieux
+Zoo/Aquarium/Lieux
+Église/Cathédrale/Lieux
+Château/Forteresse/Lieux
+Prison/Commissariat/Lieux
+Aéroport/Gare/Lieux
+Ferme/Ranch/Lieux
+Grotte/Tunnel/Lieux
+Pont/Viaduc/Lieux
+Volcan/Geyser/Lieux
+Médecin/Infirmier/Métiers
+Pompier/Policier/Métiers
+Professeur/Formateur/Métiers
+Avocat/Juge/Métiers
+Cuisinier/Pâtissier/Métiers
+Serveur/Barman/Métiers
+Coiffeur/Barbier/Métiers
+Pilote/Steward/Métiers
+Boulanger/Boucher/Métiers
+Menuisier/Maçon/Métiers
+Plombier/Électricien/Métiers
+Jardinier/Fleuriste/Métiers
+Photographe/Journaliste/Métiers
+Acteur/Figurant/Métiers
+Chanteur/Danseur/Métiers
+Astronaute/Scientifique/Métiers
+Vétérinaire/Dentiste/Métiers
+Facteur/Livreur/Métiers
+Pêcheur/Chasseur/Métiers
+Soldat/Garde du corps/Métiers
+Mariage/Fiançailles/Événements
+Anniversaire/Nouvel An/Événements
+Noël/Pâques/Événements
+Halloween/Carnaval/Événements
+Vacances/Week-end/Événements
+Déménagement/Emménagement/Événements
+Examen/Entretien d'embauche/Événements
+Enterrement/Commémoration/Événements
+Festival/Concert/Événements
+Manifestation/Grève/Événements
+Sommeil/Sieste/Concepts
+Rêve/Cauchemar/Concepts
+Amour/Amitié/Concepts
+Peur/Angoisse/Concepts
+Colère/Jalousie/Concepts
+Mensonge/Secret/Concepts
+Chance/Hasard/Concepts
+Silence/Calme/Concepts
+Argent/Dette/Concepts
+Temps/Horloge/Concepts
+Voyage/Exil/Concepts
+Souvenir/Nostalgie/Concepts
+Pluie/Neige/Nature
+Soleil/Lune/Nature
+Orage/Tempête/Nature
+Vent/Brise/Nature
+Arc-en-ciel/Aurore boréale/Nature
+Rivière/Fleuve/Nature
+Lac/Étang/Nature
+Océan/Mer/Nature
+Arbre/Buisson/Nature
+Rose/Tulipe/Nature
+Cactus/Palmier/Nature
+Feu/Fumée/Nature
+Étoile/Planète/Nature
+Sable/Terre/Nature
+Glace/Neige/Nature
+Vampire/Zombie/Fiction
+Sorcière/Magicien/Fiction
+Dragon/Dinosaure/Fiction
+Fantôme/Esprit/Fiction
+Super-héros/Justicier/Fiction
+Robot/Cyborg/Fiction
+Extraterrestre/Monstre/Fiction
+Pirate/Corsaire/Fiction
+Chevalier/Samouraï/Fiction
+Licorne/Pégase/Fiction
+Sirène/Naïade/Fiction
+Momie/Squelette/Fiction
+Instagram/TikTok/Numérique
+YouTube/Twitch/Numérique
+Netflix/Disney+/Numérique
+Google/Wikipédia/Numérique
+WhatsApp/Snapchat/Numérique
+Mot de passe/Code PIN/Numérique
+Wifi/Bluetooth/Numérique
+Selfie/Story/Numérique
+Emoji/GIF/Numérique
+Podcast/Radio/Numérique
+Mail/SMS/Numérique
+Jeu vidéo/Jeu de société/Numérique
+Manette/Clavier/Numérique
+Batterie/Chargeur/Numérique
+Bitcoin/Action en bourse/Numérique
+Chemise/T-shirt/Vêtements
+Pantalon/Jean/Vêtements
+Robe/Jupe/Vêtements
+Manteau/Veste/Vêtements
+Basket/Chaussure/Vêtements
+Chaussette/Collant/Vêtements
+Bonnet/Casquette/Vêtements
+Écharpe/Foulard/Vêtements
+Gant/Moufle/Vêtements
+Pyjama/Peignoir/Vêtements
+Maillot de bain/Short/Vêtements
+Cravate/Nœud papillon/Vêtements
+Docteur/Patient/Duos
+Prof/Élève/Duos
+Chef/Employé/Duos
+Parent/Enfant/Duos
+Voleur/Policier/Duos
+Client/Vendeur/Duos
+`;
+
+/* Pictogramme par catégorie : donne du relief au filtre et aux bandeaux. */
+window.UC_ICONS = {
+  "Administratif":"📋",
+  "Animaux":"🐾",
+  "Anniversaire":"🎂",
+  "Apiculture":"🐝",
+  "Apéritif":"🥂",
+  "Arbitrage":"🟨",
+  "Arbres fruitiers":"🌳",
+  "Armée":"🎖️",
+  "Assurance":"📑",
+  "Aviation":"✈️",
+  "Aéroport":"🛫",
+  "Banque":"🏦",
+  "Barbecue":"🍖",
+  "Bien-être":"💆",
+  "Bijouterie":"💍",
+  "Boisson":"🥤",
+  "Boissons chaudes du monde":"☕",
+  "Boulangerie":"🥖",
+  "Bricolage":"🔩",
+  "Brocante":"🕰️",
+  "Bureau":"🖇️",
+  "Bâtiments de ferme":"🏚️",
+  "Bébé":"🍼",
+  "Bébés animaux":"🐣",
+  "Camping":"⛺",
+  "Caractère":"🎭",
+  "Cartes à jouer":"🃏",
+  "Casino":"🎰",
+  "Casse-tête":"🧩",
+  "Champignons":"🍄",
+  "Chantier":"🚧",
+  "Charcuterie":"🥓",
+  "Chauffage":"🔥",
+  "Cheveux":"💇",
+  "Cinéma":"🎬",
+  "Cirque":"🎪",
+  "Coiffure":"✂️",
+  "Commerce":"🏷️",
+  "Compositeurs":"🎼",
+  "Concepts":"💭",
+  "Condiments":"🫙",
+  "Contes":"📖",
+  "Coquillages":"🦪",
+  "Corps":"🫀",
+  "Couleurs":"🎨",
+  "Couture":"🧵",
+  "Cris d'animaux":"🔊",
+  "Croisière":"🛳️",
+  "Cuisson":"🍳",
+  "Cybersécurité":"🔐",
+  "Cyclisme":"🚴",
+  "Céréales":"🌾",
+  "Danse":"💃",
+  "Dentiste":"🦷",
+  "Desserts glacés":"🍨",
+  "Dinosaures":"🦕",
+  "Duos":"👥",
+  "Entourage":"🫂",
+  "Espace":"🚀",
+  "Famille":"👨‍👩‍👧",
+  "Far West":"🤠",
+  "Ferroviaire":"🚉",
+  "Fiction":"🐉",
+  "Fitness":"🏋️",
+  "Formes":"🔺",
+  "Fromages du monde":"🧀",
+  "Fruits secs":"🥜",
+  "Fête de village":"🎡",
+  "Fête foraine":"🎠",
+  "Goûts":"👅",
+  "Géographie":"🌍",
+  "Géologie":"🪨",
+  "Habitats animaux":"🪹",
+  "Halloween":"🎃",
+  "Herboristerie":"🌿",
+  "Hôpital":"🏥",
+  "Hôtel":"🛎️",
+  "Immobilier":"🏘️",
+  "Impôts":"🧾",
+  "Informatique":"💻",
+  "Internet":"🌐",
+  "Inventions":"💡",
+  "Jardin":"🌻",
+  "Jeux Olympiques":"🏅",
+  "Jeux d'enfance":"🤸",
+  "Jeux de cartes":"♠️",
+  "Jeux de société":"🎲",
+  "Jeux vidéo":"🎮",
+  "Jeux vidéo célèbres":"👾",
+  "Jouets":"🧸",
+  "Justice":"⚖️",
+  "Langues":"🗣️",
+  "Lieux":"📍",
+  "Littérature":"📚",
+  "Livraison":"📦",
+  "Magie":"🪄",
+  "Maison":"🏠",
+  "Maquillage":"💄",
+  "Marché":"🧺",
+  "Mariage":"💒",
+  "Marine":"⚓",
+  "Mathématiques":"➗",
+  "Matériaux":"🧱",
+  "Mesures":"📏",
+  "Moyen Âge":"🏰",
+  "Musique":"🎵",
+  "Mythologie":"🏛️",
+  "Métiers":"🧑‍🔧",
+  "Métiers anciens":"⚒️",
+  "Métiers de la musique":"🎤",
+  "Métiers du numérique":"⌨️",
+  "Météo instruments":"🌡️",
+  "Nature":"🍃",
+  "Noblesse":"👑",
+  "Nourriture":"🍽️",
+  "Nouvel An":"🎆",
+  "Noël":"🎄",
+  "Numérique":"📱",
+  "Objets":"🧰",
+  "Optique":"👓",
+  "Outre-mer":"🏝️",
+  "Parfumerie":"🧴",
+  "Peintres":"🖼️",
+  "Peinture":"🖌️",
+  "Peinture en bâtiment":"🪣",
+  "Personnages historiques":"🗿",
+  "Petit-déjeuner":"🥐",
+  "Pharmacie":"💊",
+  "Photographie":"📷",
+  "Pique-nique":"🧺",
+  "Pirates":"🏴‍☠️",
+  "Plage":"🏖️",
+  "Plantes d'intérieur":"🪴",
+  "Plomberie":"🚿",
+  "Poissonnerie":"🐟",
+  "Police":"🚓",
+  "Politique":"🗳️",
+  "Poste":"✉️",
+  "Premiers secours":"🩹",
+  "Presse":"📰",
+  "Préhistoire":"🦴",
+  "Pâques":"🐰",
+  "Races de chats":"🐈",
+  "Races de chiens":"🐕",
+  "Randonnée":"🥾",
+  "Religion":"⛪",
+  "Restaurant":"🍴",
+  "Restaurant du monde":"🥡",
+  "Régions françaises":"🥐",
+  "Salle de bain":"🛁",
+  "Scientifiques":"🔬",
+  "Sensations":"✋",
+  "Signes astrologiques":"♈",
+  "Sirops":"🍹",
+  "Sommeil":"😴",
+  "Sons":"🔔",
+  "Sport":"⚽",
+  "Sports d'hiver":"⛷️",
+  "Sports mécaniques":"🏎️",
+  "Streaming":"🔴",
+  "Superstition":"🍀",
+  "Table":"🍽️",
+  "Technologies":"🤖",
+  "Théâtre":"🎭",
+  "Transport":"🚗",
+  "Travail":"💼",
+  "Télévision":"📺",
+  "Université":"🎓",
+  "Vacances":"🧳",
+  "Vaisselle":"🍽️",
+  "Viennoiseries":"🥐",
+  "Vins":"🍷",
+  "Voiture":"🚙",
+  "Vélo":"🚲",
+  "Vêtements":"👕",
+  "École":"🏫",
+  "Écologie":"♻️",
+  "Écrivains":"✒️",
+  "Égypte antique":"🔺",
+  "Électricité":"🔌",
+  "Énergie":"⚡",
+  "Époques":"⏳",
+  "Équipement sportif":"🥅",
+  "Événements":"📅",
+};
+
+/* Construction de la liste finale de paires. */
+window.UC_WORDS = (function () {
+  const pairs = [], seen = new Set();
+
+  const add = (a, b, cat, hard) => {
+    if (!a || !b) return;
+    const key = [a.toLowerCase(), b.toLowerCase()].sort().join('|');
+    if (a.toLowerCase() === b.toLowerCase() || seen.has(key)) return;
+    seen.add(key);
+    pairs.push({ a, b, cat, hard, key });
+  };
+
+  const split = src => (src || '').trim().split('\n').map(l => l.trim()).filter(Boolean);
+
+  split(window.UC_PAIRS).forEach(line => {
+    let s = line, hard = false;
+    if (s.startsWith('*')) { hard = true; s = s.slice(1); }
+    const [a, b, cat] = s.split('/').map(x => (x || '').trim());
+    add(a, b, cat, hard);
+  });
+
+  split(window.UC_GROUPS).forEach(line => {
+    let s = line, hard = false;
+    if (s.startsWith('*')) { hard = true; s = s.slice(1); }
+    const cut = s.indexOf('|');
+    if (cut < 0) return;
+    const cat = s.slice(0, cut).trim();
+    const words = s.slice(cut + 1).split(',').map(x => x.trim()).filter(Boolean);
+    for (let i = 0; i < words.length; i++)
+      for (let j = i + 1; j < words.length; j++) add(words[i], words[j], cat, hard);
+  });
+
+  return pairs;
+})();

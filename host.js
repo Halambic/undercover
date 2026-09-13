@@ -1,0 +1,334 @@
+/* Undercover — rôle d'hôte : état de la partie, messages reçus, déroulé.
+   Les décisions de jeu, elles, vivent dans rules.js. */
+/* ============================================================================
+   ÉTAT DE PARTIE (hôte uniquement)
+   phases : lobby | clue | vote | reveal | guess | end
+   ============================================================================ */
+const HOST_ID = 'host';
+const ROLE = {
+  civil: { label: 'Civil',      cls: 'b-civil', em: '🙂' },
+  under: { label: 'Undercover', cls: 'b-under', em: '🕵️' },
+  white: { label: 'Mr White',   cls: 'b-white', em: '🎩' },
+};
+let S = null;     // état hôte
+let V = null;     // vue locale (hôte comme client)
+
+function hostInit(name) {
+  S = {
+    code: NET.code, phase: 'lobby', round: 0,
+    cfg: Object.assign({ under: 1, white: 0, hard: false, whiteGuess: true, showCat: false,
+                        civilFirst: false, off: [], tClue: 0, tDebate: 0, tVote: 0 }, lsGet('uc_cfg', {})),
+    players: [], order: [], turn: 0, clues: [], chat: [], bannis: [],
+    pair: null, elim: null, result: null, tie: null, usedWords: lsGet('uc_used2', []),
+  };
+  hostAddPlayer(HOST_ID, NET.myToken, name);
+  demarrerSurveillance();
+}
+
+let surveillance = null;
+function demarrerSurveillance() {
+  clearInterval(surveillance);
+  // PeerJS ne signale pas toujours la fermeture d'un onglet : on surveille nous-memes
+  surveillance = setInterval(() => {
+    if (!S) return;
+    S.players.filter(p => p.id !== HOST_ID && p.connected && Date.now() - (p.lastSeen || 0) > 9000)
+             .forEach(p => hostSetConnected(p.id, false));
+    verifierMinuteur();
+    verifierEffectif();
+  }, 1000);
+}
+
+/* Délai de grâce avant d'interrompre : les joueurs partis reviennent souvent
+   d'eux-mêmes (rechargement, tunnel, wifi qui saute). */
+const DELAI_ABANDON = 30000;
+
+function verifierEffectif() {
+  if (!S) return;
+  if (!R.partieInjouable(S)) {
+    if (S.creuxDepuis) { S.creuxDepuis = null; broadcastViews(); }
+    return;
+  }
+  if (!S.creuxDepuis) S.creuxDepuis = Date.now();
+  if (Date.now() - S.creuxDepuis >= DELAI_ABANDON) {
+    S.creuxDepuis = null;
+    R.interrompre(S, 'Manche interrompue : plus assez de joueurs connectés.');
+  }
+  /* Diffusion à chaque seconde tant que l'alerte est là : sinon le compte à
+     rebours affiché reste figé sur sa valeur initiale. */
+  broadcastViews();
+}
+
+function hostAddPlayer(id, token, name) {
+  const taken = S.players.map(p => p.name.toLowerCase());
+  let n = clean(name) || 'Joueur', base = n, k = 2;
+  while (taken.includes(n.toLowerCase())) n = base + ' ' + (k++);
+  let scoreInitial = 0;
+  if (scoresRepris && scoresRepris[n] != null) {     // à usage unique
+    scoreInitial = scoresRepris[n];
+    delete scoresRepris[n];
+  }
+  S.players.push({ id, token, name: n, connected: true, lastSeen: Date.now(), score: scoreInitial, role: null, word: null,
+                   alive: true, voted: null, revealed: false, clue: null });
+  return S.players.at(-1);
+}
+
+/* raccourcis locaux : le moteur fournit les mêmes, on les relie à l'état courant */
+const byId = id => R.parId(S, id);
+const alivePlayers = () => R.vivants(S);
+const activeVoters = () => R.votants(S);
+
+function hostSetConnected(id, on) {
+  const p = byId(id); if (!p) return;
+  p.connected = on;
+  if (!on && S.phase === 'lobby') S.players = S.players.filter(x => x.id !== id);
+  if (!on) hostNudge();                 // un absent ne doit pas bloquer la partie
+  broadcastViews();
+}
+
+/* ---------- messages reçus par l'hôte ---------- */
+function onHostMessage(conn, msg) {
+  if (!S || !msg || typeof msg.t !== 'string') return;
+  const senderId = conn ? ([...NET.conns].find(([, c]) => c === conn)?.[0] ?? null) : HOST_ID;
+
+  if (msg.t === 'hello') {
+    if (conn === null) return;
+    // reconnexion : on retrouve le joueur par son jeton
+    // reconnexion uniquement si ce jeton correspond a un joueur actuellement absent
+    if ((S.bannis || []).includes(msg.token)) {
+      conn.send({ t: 'err', m: 'Tu as été exclu de ce salon.' });
+      setTimeout(() => conn.close(), 400); return;
+    }
+    let p = S.players.find(x => x.token === msg.token && !x.connected);
+    if (p) { NET.conns.get(p.id)?.close(); p.connected = true; p.lastSeen = Date.now(); }
+    else {
+      if (S.players.length >= MAX_JOUEURS) { conn.send({ t: 'err', m: `Salon complet (${MAX_JOUEURS} joueurs).` }); setTimeout(() => conn.close(), 400); return; }
+      p = hostAddPlayer(rid(), msg.token || rid(), msg.name);
+      if (!canConfigure()) {
+        /* Arrivé en cours de partie : il regarde sans jouer et sera intégré
+           d'office à la manche suivante. */
+        p.alive = false; p.pending = true;
+        pushLog(p.name + ' rejoint — intégration à la prochaine manche.');
+      }
+    }
+    NET.conns.set(p.id, conn);
+    conn.send({ t: 'welcome', id: p.id, code: S.code });
+    broadcastViews();
+    return;
+  }
+
+  const p = senderId ? byId(senderId) : null;
+  if (!p) return;
+  p.lastSeen = Date.now();
+  if (!p.connected) { p.connected = true; broadcastViews(); }
+  if (msg.t === 'ping') return;
+  const isHost = p.id === HOST_ID;
+
+  switch (msg.t) {
+    case 'cfg':
+      if (!isHost || !canConfigure()) return;
+      /* msg.v est une DIRECTION (+1 / −1) pour toutes les molettes. */
+      if (R.PALIERS[msg.k]) S.cfg[msg.k] = R.stepCfg(S.cfg, msg.k, msg.v);
+      if (['hard', 'whiteGuess', 'showCat', 'civilFirst'].includes(msg.k)) S.cfg[msg.k] = !!msg.v;
+      if (msg.k === 'cat') {                       // (dé)sélection d'une catégorie
+        const name = String(msg.v && msg.v.name || '');
+        if (!CATS.some(c => c.name === name)) return;
+        const off = new Set(S.cfg.off || []);
+        msg.v.on ? off.delete(name) : off.add(name);
+        S.cfg.off = [...off];
+      }
+      if (msg.k === 'cats') {                      // tout / aucune / inverser
+        if (msg.v === 'all')    S.cfg.off = [];
+        if (msg.v === 'none')   S.cfg.off = CATS.map(c => c.name);
+        if (msg.v === 'invert') { const off = new Set(S.cfg.off || []); S.cfg.off = CATS.filter(c => !off.has(c.name)).map(c => c.name); }
+      }
+      lsSet('uc_cfg', S.cfg); broadcastViews(); break;
+
+    case 'start':
+      if (!isHost || S.phase !== 'lobby') return;
+      if (cfgError()) return;
+      startRound(true); break;
+
+    case 'clue': {
+      if (S.phase !== 'clue') return;
+      if (S.order[S.turn] !== p.id) return;
+      const txt = clean(msg.text);
+      if (!txt) return;
+      S.clues.push({ round: S.round, id: p.id, text: txt });
+      p.clue = txt;
+      S.turn++;
+      hostNudge(); break;
+    }
+
+    case 'vote': {
+      if (S.phase !== 'vote' || !p.alive) return;
+      const target = byId(msg.target);
+      if (!target || !target.alive || target.id === p.id) return;
+      if (S.tie && !S.tie.includes(target.id)) return;
+      p.voted = target.id;
+      hostNudge(); break;
+    }
+
+    case 'guess': {
+      if (S.phase !== 'guess' || S.elim?.id !== p.id) return;
+      if (R.guessOk(msg.text, S.pair.civil)) endGame('white', p.id);
+      else { pushLog(`${p.name} n'a pas trouvé (le mot était « ${S.pair.civil} »).`); afterElimination(); }
+      break;
+    }
+
+    case 'next':
+      if (!isHost) return;
+      if (S.phase === 'reveal') afterElimination();
+      else if (S.phase === 'guess') { pushLog('Mr White a laissé filer sa chance.'); afterElimination(); }
+      break;
+
+    case 'again':
+      if (!isHost || S.phase !== 'end') return;
+      startRound(true); break;
+
+    case 'chat': {
+      const txt = (msg.text || '').toString().replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (!txt) return;
+      /* Les éliminés lisent sans écrire : ils connaissent leur rôle et pourraient
+         orienter la fin de partie. Un retardataire, lui, ne sait rien : il parle. */
+      if (!p.alive && !p.pending) return;
+      if (Date.now() - (p.dernierMsg || 0) < 700) return;    // garde-fou anti-spam
+      p.dernierMsg = Date.now();
+      S.chat.push({ id: p.id, name: p.name, text: txt, ts: Date.now() });
+      if (S.chat.length > 60) S.chat.shift();
+      broadcastViews(); break;
+    }
+
+    case 'openvote':
+      if (!isHost || S.phase !== 'debate') return;
+      S.phase = 'vote'; S.deadline = null; S.players.forEach(p => p.voted = null); hostNudge(); break;
+
+    case 'closevote':                              // dépouille avec ce qui est tombé
+      if (!isHost || S.phase !== 'vote') return;
+      pushLog('Vote clos par l\'hôte.');
+      resolveVote(); hostNudge(); break;
+
+    case 'abandon':                                // l'hôte n'attend pas le délai
+      if (!isHost || S.phase === 'lobby' || S.phase === 'end') return;
+      S.creuxDepuis = null;
+      R.interrompre(S, 'Manche interrompue par l\'hôte.');
+      broadcastViews(); break;
+
+    case 'skip':                                   // l'hote debloque un joueur absent ou muet
+      if (!isHost || S.phase !== 'clue') return;
+      S.turn++; hostNudge(); break;
+
+    case 'kick': {
+      if (!isHost) return;
+      const v = byId(msg.id);
+      if (!v || v.id === HOST_ID) return;
+      NET.conns.get(v.id)?.close();
+      NET.conns.delete(v.id);
+      /* Sans ça, sa reconnexion automatique le ferait revenir aussitôt. */
+      S.bannis = S.bannis || [];
+      if (v.token && !S.bannis.includes(v.token)) S.bannis.push(v.token);
+
+      if (canConfigure()) {                      // hors partie : on le retire purement
+        S.players = S.players.filter(x => x.id !== v.id);
+        broadcastViews(); break;
+      }
+      /* En pleine manche, on ne peut pas l'effacer : son nom apparaît dans les
+         indices déjà donnés et son rôle compte dans l'équilibre. On l'élimine,
+         ce qui laisse la partie cohérente. */
+      v.connected = false;
+      if (v.alive) {
+        v.alive = false; v.revealed = true;
+        pushLog(v.name + ' a été exclu par l\'hôte.');
+        const issue = R.outcome(R.vivants(S));
+        if (issue) { endGame(issue); break; }
+      }
+      hostNudge(); break;
+    }
+  }
+}
+
+/* ---------- réglages ---------- */
+const canConfigure = () => S.phase === 'lobby' || S.phase === 'end';
+
+/* L'appli officielle "suggere automatiquement le bon nombre de chaque role
+   selon le nombre de joueurs" sans publier sa table : environ 1 imposteur
+   pour 4 joueurs donne des parties equilibrees. */
+const cfgAdvice = () => R.cfgAdvice(S.players.length, S.cfg);
+
+const cfgError = () => R.cfgError(S.players.length, S.cfg, countPairs(S.cfg));
+
+/* ---------- tirage des mots, sans répétition ---------- */
+function pickPair() {
+  const r = R.pickPair(WORDS, S.usedWords, S.cfg);
+  if (!r) return null;
+  S.usedWords = r.used; lsSet('uc_used2', S.usedWords);
+  return r.pair;
+}
+
+/* ============================================================================
+   DÉROULÉ DE LA PARTIE (hôte)
+   ============================================================================ */
+const pushLog = texte => R.journal(S, texte);
+
+/* Pose l'échéance de la phase en cours (null si le minuteur est coupé). */
+const armerMinuteur = () => R.armer(S, Date.now());
+
+/* Échéance dépassée : on passe le joueur muet, ou on ouvre le vote. */
+function verifierMinuteur() {
+  if (R.echeance(S, Date.now())) broadcastViews();
+}
+
+function startRound(fresh) {
+  if (fresh) {
+    const err = cfgError(); if (err) return toast(err);   // le tirage reste ici : il persiste l'historique
+    const pair = pickPair();
+    if (!pair) return toast('Aucun mot disponible.');
+    R.demarrerManche(S, { pair, roles: R.assignRoles(S.players.length, S.cfg) });
+  } else R.demarrerManche(S);
+  armerMinuteur();
+  hostNudge();
+}
+
+/* Ordre tiré au sort à chaque manche, comme dans les règles officielles.
+   L'option "un civil ouvre le tour" évite que Mr White parle sans aucune
+   information — ce qui le condamne d'avance — mais elle est désactivée par défaut. */
+
+
+/* Avance automatiquement tant que l'étape courante est déjà satisfaite
+   (joueur déconnecté à passer, dernier vote reçu, etc.). */
+function hostNudge() {
+  R.avancer(S, Date.now());
+  broadcastViews();
+}
+
+const resolveVote = () => R.depouiller(S);
+
+function afterElimination() {
+  const suite = R.apresElimination(S);
+  if (suite === 'manche') armerMinuteur();
+  hostNudge();
+}
+
+function endGame(winner, heroId) {
+  R.terminer(S, winner, heroId);
+  broadcastViews();
+}
+
+function viewFor(id) {
+  /* Le filtrage vit dans rules.js (testé) ; on n'ajoute ici que ce qui dépend
+     du réseau et de l'instant présent. */
+  return R.projeter(S, id, {
+    isHost: id === HOST_ID, code: S.code,
+    cfgError: canConfigure() ? cfgError() : null,
+    cfgAdvice: canConfigure() ? cfgAdvice() : null,
+    reste: S.deadline ? Math.max(0, S.deadline - Date.now()) : null,  // ms : horloges non synchronisées
+    creux: S.creuxDepuis ? Math.max(0, DELAI_ABANDON - (Date.now() - S.creuxDepuis)) : null,
+  });
+}
+
+/* ---------- messages reçus par un client ---------- */
+function onClientMessage(msg) {
+  if (!msg) return;
+  if (msg.t === 'welcome') { NET.code = msg.code; return; }
+  if (msg.t === 'err')     { overlay('🚫', 'Impossible de rejoindre', msg.m); return; }
+  if (msg.t === 'state')   { V = msg.v; render(); }
+}
