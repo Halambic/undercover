@@ -305,11 +305,10 @@ partagé peut montrer l'ancienne version pendant quelques heures. Ajouter
 
 ## Mettre en ligne sur GitHub Pages
 
+Le dépôt est déjà initialisé et le premier commit est fait. Il ne reste qu'à
+le relier à GitHub :
+
 ```bash
-git init
-git add .
-git commit -m "Undercover"
-git branch -M main
 git remote add origin git@github.com:<ton-compte>/<ton-repo>.git
 git push -u origin main
 ```
@@ -320,6 +319,29 @@ Puis dans le dépôt : **Settings → Pages → Source : Deploy from a branch �
 
 Rien d'autre à configurer : pas de build, pas de dépendance à installer, pas de
 serveur à louer.
+
+Deux détails qui font que ça marche du premier coup :
+
+- **`.nojekyll`** à la racine. Sans lui, GitHub Pages fait passer le dépôt par
+  Jekyll, qui a ses propres idées sur les fichiers à publier.
+- **`index.html` à la racine**, et tous les chemins internes relatifs — le site
+  fonctionne aussi bien à la racine d'un domaine que dans un sous-dossier
+  `/<ton-repo>/`.
+
+### L'aperçu du lien dans Discord
+
+Un point à corriger **une fois l'adresse connue** : les balises `og:image` et
+`twitter:image` d'`index.html` pointent vers `og.jpg` en relatif. Les robots
+d'aperçu — Discord en tête — veulent une **URL absolue**. Remplace les deux par
+l'adresse complète :
+
+```html
+<meta property="og:image" content="https://<ton-compte>.github.io/<ton-repo>/og.jpg">
+<meta name="twitter:image" content="https://<ton-compte>.github.io/<ton-repo>/og.jpg">
+```
+
+Le favicon et l'icône Apple, eux, restent en relatif : les navigateurs les
+résolvent correctement.
 
 ## Comment le multijoueur fonctionne sans serveur
 
