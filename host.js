@@ -18,7 +18,7 @@ function hostInit(name) {
     code: NET.code, phase: 'lobby', round: 0,
     cfg: Object.assign({ under: 1, white: 0, hard: false, whiteGuess: true, showCat: false,
                         civilFirst: false, off: [], tClue: 0, tDebate: 0, tVote: 0 }, lsGet('uc_cfg', {})),
-    players: [], order: [], turn: 0, clues: [], chat: [], bannis: [],
+    players: [], order: [], turn: 0, clues: [], chat: [], chatSeq: 0, bannis: [],
     pair: null, elim: null, result: null, tie: null, usedWords: lsGet('uc_used2', []),
   };
   hostAddPlayer(HOST_ID, NET.myToken, name);
@@ -98,11 +98,24 @@ function onHostMessage(conn, msg) {
       conn.send({ t: 'err', m: 'Tu as été exclu de ce salon.' });
       setTimeout(() => conn.close(), 400); return;
     }
-    let p = S.players.find(x => x.token === msg.token && !x.connected);
+    /* On rend son siège si le jeton correspond à quelqu'un d'absent — ou dont
+       la connexion est morte sans que la surveillance l'ait encore vu passer,
+       ce qui est le cas de celui qui rouvre sa page en moins de neuf secondes.
+       L'hôte est exclu de la recherche : il joue en local, sans entrée dans
+       `conns`, donc le test de connexion morte serait toujours vrai pour lui et
+       n'importe quel arrivant pourrait lui prendre sa place. */
+    let p = S.players.find(x => x.id !== HOST_ID           // l'hôte n'est jamais au bout d'un fil
+                                && x.token === msg.token
+                                && (!x.connected || !NET.conns.get(x.id)?.open));
     if (p) { NET.conns.get(p.id)?.close(); p.connected = true; p.lastSeen = Date.now(); }
     else {
       if (S.players.length >= MAX_JOUEURS) { conn.send({ t: 'err', m: `Salon complet (${MAX_JOUEURS} joueurs).` }); setTimeout(() => conn.close(), 400); return; }
-      p = hostAddPlayer(rid(), msg.token || rid(), msg.name);
+      /* Jeton déjà porté par quelqu'un de connecté (deuxième onglet sur la même
+         machine) : on en forge un neuf, sinon deux joueurs partageraient une
+         identité et la reprise de siège désignerait n'importe qui. */
+      let jeton = msg.token;
+      if (!jeton || S.players.some(x => x.token === jeton)) jeton = rid() + rid();
+      p = hostAddPlayer(rid(), jeton, msg.name);
       if (!canConfigure()) {
         /* Arrivé en cours de partie : il regarde sans jouer et sera intégré
            d'office à la manche suivante. */
@@ -111,7 +124,8 @@ function onHostMessage(conn, msg) {
       }
     }
     NET.conns.set(p.id, conn);
-    conn.send({ t: 'welcome', id: p.id, code: S.code });
+    p.chatVu = 0;                       // nouvelle connexion : renvoyer l'historique
+    conn.send({ t: 'welcome', id: p.id, code: S.code, token: p.token });
     broadcastViews();
     return;
   }
@@ -193,7 +207,7 @@ function onHostMessage(conn, msg) {
       if (!p.alive && !p.pending) return;
       if (Date.now() - (p.dernierMsg || 0) < 700) return;    // garde-fou anti-spam
       p.dernierMsg = Date.now();
-      S.chat.push({ id: p.id, name: p.name, text: txt, ts: Date.now() });
+      S.chat.push({ id: p.id, name: p.name, text: txt, ts: Date.now(), n: ++S.chatSeq });
       if (S.chat.length > 60) S.chat.shift();
       broadcastViews(); break;
     }
@@ -315,20 +329,39 @@ function endGame(winner, heroId) {
 
 function viewFor(id) {
   /* Le filtrage vit dans rules.js (testé) ; on n'ajoute ici que ce qui dépend
-     du réseau et de l'instant présent. */
-  return R.projeter(S, id, {
+     du réseau et de l'instant présent.
+     Le chat n'est envoyé qu'en différentiel : chaque joueur a son curseur, et
+     ne reçoit que ce qu'il n'a pas déjà. Sans ça les soixante derniers messages
+     repartaient vers tout le monde à chaque indice et à chaque vote. */
+  const dest = byId(id);
+  const vue = R.projeter(S, id, {
     isHost: id === HOST_ID, code: S.code,
     cfgError: canConfigure() ? cfgError() : null,
     cfgAdvice: canConfigure() ? cfgAdvice() : null,
     reste: S.deadline ? Math.max(0, S.deadline - Date.now()) : null,  // ms : horloges non synchronisées
     creux: S.creuxDepuis ? Math.max(0, DELAI_ABANDON - (Date.now() - S.creuxDepuis)) : null,
-  });
+  }, dest ? (dest.chatVu || 0) : 0);
+  return vue;
 }
 
 /* ---------- messages reçus par un client ---------- */
+/* L'hôte n'envoie que les messages neufs : c'est ici qu'on reconstitue le fil.
+   `chatPlein` marque un envoi complet (première connexion, reconnexion) et
+   remplace l'historique local au lieu de s'y ajouter. */
+let CHAT = [];
+
 function onClientMessage(msg) {
   if (!msg) return;
-  if (msg.t === 'welcome') { NET.code = msg.code; return; }
+  if (msg.t === 'welcome') {
+    NET.code = msg.code;
+    if (msg.token) retenirJeton(msg.code, msg.token);
+    return;
+  }
   if (msg.t === 'err')     { overlay('🚫', 'Impossible de rejoindre', msg.m); return; }
-  if (msg.t === 'state')   { V = msg.v; render(); }
+  if (msg.t === 'state')   {
+    CHAT = msg.v.chatPlein ? msg.v.chat : CHAT.concat(msg.v.chat);
+    if (CHAT.length > 60) CHAT = CHAT.slice(-60);
+    msg.v.chat = CHAT;
+    V = msg.v; render();
+  }
 }

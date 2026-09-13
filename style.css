@@ -61,7 +61,10 @@ body.relance .col.left{display:flex}
 .col.center{justify-content:flex-start}
 /* La scène et le chat se partagent la hauteur de la colonne centrale : deux
    tiers / un tiers, chacun défilant chez lui plutôt que d'allonger la page. */
-.col.center>.panel:first-child{flex:2 1 0;min-height:360px;display:flex;flex-direction:column}
+/* Désigné par sa classe et non par sa position : sur écran étroit la carte de
+   rôle se glisse devant lui, et « :first-child » lui refilait l'étirement. */
+.col.center>.scenepan{flex:2 1 0;min-height:360px;display:flex;flex-direction:column}
+.col.center>#rolePanel{flex:0 0 auto}
 
 /* ---------------- fiches ---------------- */
 .panel{

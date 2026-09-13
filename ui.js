@@ -4,6 +4,10 @@
    ============================================================================ */
 let blurWord = false;
 
+/* Le seuil est le même que celui de la feuille de style : au-delà, les
+   colonnes s'empilent au lieu de se juxtaposer. */
+const etroit = () => window.matchMedia('(max-width:1080px)').matches;
+
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
 function playerRow(p, o = {}) {
@@ -129,8 +133,15 @@ function render() {
     kick: V.isHost && p.id !== V.me,          // aussi en pleine partie : un gêneur doit pouvoir sortir
   })));
 
-  /* --- ta carte --- */
+  /* --- ta carte ---
+     Sur un écran étroit les colonnes s'empilent et la carte, en bas de la
+     colonne de droite, tombait sous la ligne de flottaison : il fallait
+     défiler pour relire son propre mot, la chose qu'on regarde le plus
+     souvent. On la remonte donc devant la scène. Même mécanique que le chat :
+     le nœud n'est déplacé que si la zone change. */
   const rp = $('#rolePanel');
+  const zoneRole = etroit() ? $('.col.center') : $('.col.right');
+  if (rp.parentElement !== zoneRole) zoneRole.prepend(rp);
   rp.hidden = V.phase === 'lobby' || !V.you || !V.you.role;
   if (!rp.hidden) {
     const white = V.you.role === 'white';
@@ -517,6 +528,14 @@ $('#btnCopy').onclick = async () => {
 /* Les fondus ne doivent apparaître que s'il y a vraiment du contenu caché de ce
    côté-là : appliqués en permanence, ils rognaient le premier et le dernier
    élément de la liste. */
+/* Passer de l'empilement aux colonnes change la place de la carte de rôle :
+   il faut redessiner, mais pas à chaque pixel de redimensionnement. */
+let redessin = null;
+window.addEventListener('resize', () => {
+  clearTimeout(redessin);
+  redessin = setTimeout(() => { if (V) render(); }, 150);
+});
+
 function majFondus(el) {
   if (!el) return;
   el.classList.toggle('defile', el.scrollTop > 4);

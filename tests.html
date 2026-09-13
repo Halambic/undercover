@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=7"></script>
+<script src="rules.js?v=8"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -444,6 +444,42 @@ groupe('Effectif insuffisant');
   verifie('les indices sont effacés', e.clues.length === 0);
   verifie('la raison est journalisée', e.log.join(' ').includes('Plus assez'), e.log);
   verifie('rien à interrompre dans le salon', R.partieInjouable(e) === false);
+}
+
+groupe('Chat différentiel');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  e.chatSeq = 0;
+  const dire = (id, txt) => e.chat.push({ id, name: R.parId(e, id).name, text: txt,
+                                          ts: 0, n: ++e.chatSeq });
+  dire('p0', 'salut'); dire('p1', 'ça va ?');
+
+  const complet = R.projeter(e, 'p2', {}, 0);
+  verifie('curseur à zéro : tout l\'historique', complet.chat.length === 2, complet.chat.length);
+  verifie('et signalé comme envoi complet', complet.chatPlein === true);
+
+  const rien = R.projeter(e, 'p2', {}, 2);
+  verifie('à jour : plus rien à envoyer', rien.chat.length === 0, rien.chat);
+  verifie('envoi partiel signalé', rien.chatPlein === false);
+
+  dire('p2', 'moi c\'est bon');
+  const neuf = R.projeter(e, 'p0', {}, 2);
+  verifie('un seul message neuf transmis', neuf.chat.length === 1, neuf.chat.map(m => m.text));
+  verifie('le bon message', neuf.chat[0].text === 'moi c\'est bon', neuf.chat[0]);
+  verifie('« mine » reste calculé par destinataire',
+          neuf.chat[0].mine === false && R.projeter(e, 'p2', {}, 2).chat[0].mine === true);
+
+  /* le différentiel ne doit rien changer au reste de la vue */
+  const a = R.projeter(e, 'p0', {}, 0), b = R.projeter(e, 'p0', {}, 3);
+  verifie('le reste de la vue est identique',
+          JSON.stringify({ ...a, chat: 0, chatPlein: 0 }) === JSON.stringify({ ...b, chat: 0, chatPlein: 0 }));
+
+  /* un message sans numéro (partie sauvegardée avant ce changement) */
+  e.chat.unshift({ id: 'p0', name: 'J0', text: 'ancien', ts: 0 });
+  verifie('un vieux message sans numéro n\'est jamais renvoyé',
+          R.projeter(e, 'p0', {}, 1).chat.every(m => m.text !== 'ancien'));
+  verifie('mais il apparaît dans un envoi complet',
+          R.projeter(e, 'p0', {}, 0).chat.some(m => m.text === 'ancien'));
 }
 
 groupe('Scrutin détaillé');

@@ -6,17 +6,42 @@ const NET = {
   peer: null, isHost: false, code: null,
   conns: new Map(),   // hôte : id joueur -> DataConnection
   hostConn: null,     // client : connexion vers l'hôte
-  /* Jeton d'identité par ONGLET (sessionStorage), pas par navigateur : il
-     survit à un rechargement — ce qui permet de retrouver son rôle — mais deux
-     onglets d'une même machine restent deux joueurs distincts. */
-  myToken: (() => {
-    try {
-      let t = sessionStorage.getItem('uc_token');
-      if (!t) { t = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); sessionStorage.setItem('uc_token', t); }
-      return t;
-    } catch { return Math.random().toString(36).slice(2, 12); }
-  })(),
+  /* Jeton d'identité, posé à l'entrée dans un salon (voir jetonPour). */
+  myToken: null,
 };
+
+/* ---------------------------------------------------------------------------
+   IDENTITÉ — retrouver son siège
+   Le jeton vivait dans le sessionStorage seul : il survivait à un rechargement,
+   mais fermer l'onglet faisait perdre sa place, son rôle et son mot, et laissait
+   dans la partie un fantôme injoignable. Deux niveaux, désormais :
+
+     sessionStorage  uc_tok_<CODE>   l'onglet en cours — priorité absolue, c'est
+                                     ce qui garde deux onglets bien distincts ;
+     localStorage    uc_seat_<CODE>  le dernier siège occupé dans ce salon depuis
+                                     ce navigateur — la bouée quand l'onglet a
+                                     été fermé.
+
+   L'hôte a le dernier mot : il renvoie dans « welcome » le jeton qu'il a retenu,
+   et en forge un neuf si celui présenté appartient déjà à quelqu'un de connecté.
+   Deux onglets ouverts en même temps ne peuvent donc pas se retrouver avec la
+   même identité.
+   --------------------------------------------------------------------------- */
+const SIEGE_TTL = 12 * 3600 * 1000;
+const nouveauJeton = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+function jetonPour(code) {
+  try { const s = sessionStorage.getItem('uc_tok_' + code); if (s) return s; } catch {}
+  const sv = lsGet('uc_seat_' + code, null);
+  if (sv && sv.token && Date.now() - (sv.ts || 0) < SIEGE_TTL) return sv.token;
+  return nouveauJeton();
+}
+
+function retenirJeton(code, token) {
+  NET.myToken = token;
+  try { sessionStorage.setItem('uc_tok_' + code, token); } catch {}
+  lsSet('uc_seat_' + code, { token, ts: Date.now() });
+}
 
 function setNetStatus(ok, txt) {
   $('#netDot').classList.toggle('off', !ok);
@@ -40,9 +65,11 @@ async function reprendreRoom() {
   for (let essai = 0; essai < 6; essai++) {
     try {
       NET.peer = await newPeer(PREFIX + sv.code);
-      NET.isHost = true; NET.code = sv.code; NET.myToken = sv.token;
+      NET.isHost = true; NET.code = sv.code;
+      retenirJeton(sv.code, sv.token);
       hookHostPeer();
       S = sv.etat;
+      S.chat = S.chat || []; S.chatSeq = S.chatSeq || 0;   // sauvegarde d'avant le chat différentiel
       S.players.forEach(p => { if (p.id !== HOST_ID) p.connected = false; });  // ils vont revenir
       demarrerSurveillance();
       enterGame();
@@ -63,6 +90,7 @@ async function createRoom(name) {
     try {
       NET.peer = await newPeer(PREFIX + code);
       NET.isHost = true; NET.code = code;
+      retenirJeton(code, jetonPour(code));
       hookHostPeer();
       hostInit(name);
       enterGame();
@@ -96,6 +124,7 @@ function hookHostPeer() {
 async function joinRoom(code, name) {
   NET.peer = await newPeer(null);
   NET.isHost = false; NET.code = code;
+  NET.myToken = jetonPour(code);          // on tente de récupérer son siège
   const conn = NET.peer.connect(PREFIX + code, { reliable: true });
   NET.hostConn = conn;
 
@@ -193,6 +222,7 @@ async function reprendreLaMain(name) {
     try {
       NET.peer = await newPeer(PREFIX + code);
       NET.isHost = true; NET.code = code;
+      retenirJeton(code, NET.myToken || jetonPour(code));
       hookHostPeer();
       hostInit(name);
       enterGame();
@@ -212,13 +242,20 @@ function send(msg) {                       // client -> hôte (ou hôte -> lui-m
   if (NET.isHost) onHostMessage(null, msg);
   else if (NET.hostConn && NET.hostConn.open) NET.hostConn.send(msg);
 }
-function sendTo(pid, msg) {                // hôte -> un joueur
-  if (pid === HOST_ID) { onClientMessage(msg); return; }
+function sendTo(pid, msg) {                // hôte -> un joueur ; vrai si parti
+  if (pid === HOST_ID) { onClientMessage(msg); return true; }
   const c = NET.conns.get(pid);
-  if (c && c.open) c.send(msg);
+  if (c && c.open) { c.send(msg); return true; }
+  return false;
 }
 function broadcastViews() {
-  S.players.forEach(p => sendTo(p.id, { t: 'state', v: viewFor(p.id) }));
+  S.players.forEach(p => {
+    /* Le curseur de chat n'avance qu'une fois la vue réellement partie. Si
+       l'envoi échoue on le remet à zéro : le joueur recevra tout l'historique
+       à son retour plutôt que de perdre les messages de son absence. */
+    const partie = sendTo(p.id, { t: 'state', v: viewFor(p.id) });
+    p.chatVu = partie ? S.chatSeq : 0;
+  });
   sauverEtat();
 }
 

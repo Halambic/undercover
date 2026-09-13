@@ -135,6 +135,57 @@ qui a parlé (✓), qui parle et qui attend ; celui dont c'est le tour apparaît
 grand sous un projecteur qui respire, avec trois points animés ; les indices
 déjà donnés se posent au centre comme des fiches légèrement de travers.
 
+## Retrouver son siège
+
+L'identité d'un joueur tient dans un jeton, à deux niveaux :
+
+| Où | Clé | Rôle |
+|---|---|---|
+| `sessionStorage` | `uc_tok_<CODE>` | l'onglet en cours — prioritaire, c'est lui qui garde deux onglets bien distincts |
+| `localStorage` | `uc_seat_<CODE>` | le dernier siège occupé dans ce salon depuis ce navigateur, valable 12 h — la bouée quand l'onglet a été fermé |
+
+Avant, le jeton ne vivait que dans le `sessionStorage` : recharger la page
+marchait, mais **fermer l'onglet faisait perdre sa place**, son rôle et son mot,
+et laissait dans la partie un fantôme injoignable. Maintenant, rouvrir le lien
+d'invitation rend le siège, avec le rôle, le mot et l'historique du chat.
+
+**L'hôte a le dernier mot.** Il renvoie dans `welcome` le jeton qu'il a retenu,
+et en forge un neuf si celui présenté appartient déjà à quelqu'un de connecté.
+Deux onglets ouverts en même temps ne peuvent donc jamais partager une identité.
+Le siège de l'hôte est en outre exclu de toute reprise : il joue en local, sans
+entrée dans `conns`, donc le test « sa connexion est-elle morte ? » serait
+toujours vrai pour lui et n'importe quel arrivant lui prendrait sa place.
+
+*Limite connue :* deux onglets du même navigateur dans le même salon se
+partagent la clé `uc_seat_`, et c'est le dernier arrivé qui l'écrit. Si le
+premier ferme puis rouvre son onglet, il repart en nouveau joueur. Un
+rechargement, lui, marche toujours — le `sessionStorage` prend le dessus.
+
+## Le chat ne circule qu'une fois
+
+Chaque message porte un numéro d'ordre, et l'hôte retient pour chaque joueur ce
+qu'il lui a déjà envoyé : une vue ne transporte que les messages neufs. Avant,
+les soixante derniers messages repartaient en entier vers tout le monde à chaque
+indice et à chaque vote — sur une partie bavarde à 20 joueurs, des dizaines de
+kilo-octets par action, sur des liens P2P.
+
+Mesuré sur une partie à 25 messages : la vue passe de 3 226 à 908 octets, soit
+**72 % de moins**, et l'écart grandit avec le fil.
+
+Le curseur n'avance qu'une fois la vue réellement partie ; si l'envoi échoue il
+retombe à zéro, et le joueur reçoit tout l'historique à son retour plutôt que de
+perdre les messages de son absence. Un message sans numéro vient d'une
+sauvegarde antérieure à ce mécanisme : il est joint aux envois complets.
+
+## Sur téléphone
+
+Sous 1080 px les colonnes s'empilent. La carte « ton rôle » vivait alors en bas
+de page : sur un écran de 812 px de haut elle commençait à 892 px, c'est-à-dire
+entièrement hors de vue — il fallait défiler pour relire son propre mot, la
+chose qu'on regarde le plus souvent. Elle est maintenant déplacée devant la
+scène, comme le chat l'est déjà entre les colonnes. Le déplacement est refait
+au redimensionnement, pour suivre une rotation d'écran.
+
 ## Couleurs des joueurs
 
 Chaque pseudo donne une teinte par hachage (FNV-1a), stable d'une partie à

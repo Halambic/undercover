@@ -349,7 +349,7 @@ window.UC_RULES = (() => {
      le rôle ou le mot d'un autre avant révélation. Fonction pure, donc
      vérifiable par tests.js sans ouvrir de salon.
      ---------------------------------------------------------------------- */
-  function projeter(e, id, extra = {}) {
+  function projeter(e, id, extra = {}, chatDepuis = 0) {
     const moi = e.players.find(p => p.id === id);
     const toutVoir = e.phase === 'end';
     const nomDe = pid => (e.players.find(p => p.id === pid) || {}).name || '?';
@@ -374,7 +374,13 @@ window.UC_RULES = (() => {
         ? (e.lastVotes || []).map(v => ({ de: nomDe(v.de), vers: v.vers ? nomDe(v.vers) : null }))
         : null,
       result: e.result, log: e.log || [],
-      chat: (e.chat || []).map(m => ({ name: m.name, text: m.text, ts: m.ts, mine: m.id === id })),
+      /* Différentiel : seulement ce que ce joueur n'a pas encore reçu.
+         `chatPlein` prévient le client qu'il s'agit d'un envoi complet.
+         Un message sans numéro vient d'une sauvegarde antérieure au différentiel :
+         il n'a pas de place dans la file, on le joint aux envois complets. */
+      chat: (e.chat || []).filter(m => m.n == null ? !chatDepuis : m.n > chatDepuis)
+                          .map(m => ({ name: m.name, text: m.text, ts: m.ts, mine: m.id === id })),
+      chatPlein: !chatDepuis,
       ...extra,
     };
   }
