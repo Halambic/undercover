@@ -12,14 +12,15 @@
 <meta name="theme-color" content="#0a0b0f">
 
 <!-- Aperçu du lien (Discord, WhatsApp, Slack, Twitter…).
-     Les chemins sont relatifs : les robots les résolvent depuis l'adresse de la
-     page. Si un service refuse l'aperçu, remplace-les par des URL absolues
-     (https://ton-compte.github.io/ton-repo/og.jpg). -->
+     L'image est en URL ABSOLUE : les robots d'aperçu, Discord en tête, ne
+     résolvent pas un chemin relatif. Si l'adresse du site change, ce sont les
+     trois lignes ci-dessous (og:url, og:image, twitter:image) à mettre à jour. -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://halambic.github.io/undercover/">
 <meta property="og:site_name" content="Undercover">
 <meta property="og:title" content="Undercover — le jeu de l'imposteur, en ligne">
 <meta property="og:description" content="Tout le monde reçoit le même mot, sauf les Undercover et Mr White. Un code de salon à partager, chacun sur son écran. Sans inscription.">
-<meta property="og:image" content="og.jpg">
+<meta property="og:image" content="https://halambic.github.io/undercover/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Trois silhouettes en file d'identification sous un projecteur, celle du milieu portant un chapeau et une barre de censure sur les yeux.">
@@ -27,7 +28,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Undercover — le jeu de l'imposteur, en ligne">
 <meta name="twitter:description" content="Un code de salon à partager, chacun sur son écran. Sans inscription, sans serveur.">
-<meta name="twitter:image" content="og.jpg">
+<meta name="twitter:image" content="https://halambic.github.io/undercover/og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

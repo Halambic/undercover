@@ -309,13 +309,13 @@ Le dépôt est déjà initialisé et le premier commit est fait. Il ne reste qu'
 le relier à GitHub :
 
 ```bash
-git remote add origin git@github.com:<ton-compte>/<ton-repo>.git
+git remote add origin git@github.com:Halambic/undercover.git
 git push -u origin main
 ```
 
 Puis dans le dépôt : **Settings → Pages → Source : Deploy from a branch →
 `main` / `/ (root)` → Save**. Le jeu est en ligne une minute plus tard sur
-`https://<ton-compte>.github.io/<ton-repo>/`.
+**https://halambic.github.io/undercover/**.
 
 Rien d'autre à configurer : pas de build, pas de dépendance à installer, pas de
 serveur à louer.
@@ -330,18 +330,22 @@ Deux détails qui font que ça marche du premier coup :
 
 ### L'aperçu du lien dans Discord
 
-Un point à corriger **une fois l'adresse connue** : les balises `og:image` et
-`twitter:image` d'`index.html` pointent vers `og.jpg` en relatif. Les robots
-d'aperçu — Discord en tête — veulent une **URL absolue**. Remplace les deux par
-l'adresse complète :
+Trois balises d'`index.html` portent l'adresse du site **en dur**, parce que les
+robots d'aperçu ne résolvent pas les chemins relatifs :
 
 ```html
-<meta property="og:image" content="https://<ton-compte>.github.io/<ton-repo>/og.jpg">
-<meta name="twitter:image" content="https://<ton-compte>.github.io/<ton-repo>/og.jpg">
+<meta property="og:url"     content="https://halambic.github.io/undercover/">
+<meta property="og:image"   content="https://halambic.github.io/undercover/og.jpg">
+<meta name="twitter:image"  content="https://halambic.github.io/undercover/og.jpg">
 ```
 
-Le favicon et l'icône Apple, eux, restent en relatif : les navigateurs les
-résolvent correctement.
+**Si le dépôt est renommé ou déplacé, ce sont les seules lignes à changer** —
+tout le reste du site est en relatif et suit l'adresse tout seul. Le favicon et
+l'icône Apple restent relatifs : les navigateurs, eux, les résolvent bien.
+
+Discord garde en cache l'aperçu d'une URL pendant plusieurs heures. Si le
+premier partage tombe avant que Pages ne soit en ligne, l'aperçu restera vide un
+moment : partage le lien avec un `?x=1` au bout pour forcer une nouvelle lecture.
 
 ## Comment le multijoueur fonctionne sans serveur
 
