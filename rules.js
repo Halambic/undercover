@@ -68,6 +68,22 @@ window.UC_RULES = (() => {
     return paliers[Math.max(0, Math.min(paliers.length - 1, cible))];
   }
 
+  /**
+   * Applique « tout / aucune / inverser » à un SOUS-ENSEMBLE de catégories —
+   * celles que la recherche laisse affichées. Rend la nouvelle liste des
+   * catégories écartées. Les noms inconnus sont ignorés : la liste vient du
+   * client, on ne s'y fie pas.
+   */
+  function appliquerCats(off, cible, action, connues) {
+    const set = new Set(off || []);
+    const ok = connues ? new Set(connues) : null;
+    const noms = (cible || []).filter(n => !ok || ok.has(n));
+    if (action === 'all')    noms.forEach(n => set.delete(n));
+    if (action === 'none')   noms.forEach(n => set.add(n));
+    if (action === 'invert') noms.forEach(n => set.has(n) ? set.delete(n) : set.add(n));
+    return ['all', 'none', 'invert'].includes(action) ? [...set] : (off || []);
+  }
+
   /* ---- mots ------------------------------------------------------------ */
 
   /** Filtre la banque selon la difficulté et les catégories coupées. */
@@ -389,6 +405,7 @@ window.UC_RULES = (() => {
   const guessOk = (essai, motCivil) => !!norm(essai) && norm(essai) === norm(motCivil);
 
   return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, stepCfg, shuffle, norm, cfgError, cfgAdvice,
+           appliquerCats,
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,
            parId, vivants, votants, journal, dureePhase, armer, demarrerManche,

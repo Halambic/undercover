@@ -32,7 +32,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -93,7 +93,7 @@
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="playersPanel">
       <div class="hd"><span class="tt">Joueurs (<span id="pCount">0</span>)</span><span class="mini" id="phaseLbl"></span></div>
       <div class="plist scroll" id="playerList" style="max-height:52vh"></div>
     </div>
@@ -175,6 +175,11 @@
 
     <div class="panel" id="catPanel" hidden>
       <div class="hd"><span class="tt">Catégories</span><span class="mini" id="catCount"></span></div>
+      <div class="catsearch">
+        <input id="catSearch" type="search" placeholder="Chercher une catégorie…"
+               autocomplete="off" aria-label="Chercher une catégorie" maxlength="30">
+        <button id="catClear" type="button" aria-label="Effacer la recherche" hidden>✕</button>
+      </div>
       <div class="catbar" id="catBar">
         <button data-c="all">Tout</button>
         <button data-c="none">Aucune</button>
@@ -205,13 +210,13 @@
      sinon les navigateurs resservent l'ancienne version depuis leur cache. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=8"></script>
-<script src="utils.js?v=3"></script>
+<script src="rules.js?v=9"></script>
+<script src="utils.js?v=4"></script>
 <script src="sfx.js?v=4"></script>
 <script src="art.js?v=2"></script>
-<script src="net.js?v=2"></script>
-<script src="host.js?v=7"></script>
-<script src="ui.js?v=7"></script>
+<script src="net.js?v=3"></script>
+<script src="host.js?v=10"></script>
+<script src="ui.js?v=10"></script>
 <script src="app.js?v=1"></script>
 </body>
 </html>

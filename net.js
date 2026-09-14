@@ -70,6 +70,7 @@ async function reprendreRoom() {
       hookHostPeer();
       S = sv.etat;
       S.chat = S.chat || []; S.chatSeq = S.chatSeq || 0;   // sauvegarde d'avant le chat différentiel
+      S.bannis = (S.bannis || []).map(b => typeof b === 'string' ? { token: b, name: 'Joueur exclu' } : b);
       S.players.forEach(p => { if (p.id !== HOST_ID) p.connected = false; });  // ils vont revenir
       demarrerSurveillance();
       enterGame();

@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=8"></script>
+<script src="rules.js?v=9"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -444,6 +444,38 @@ groupe('Effectif insuffisant');
   verifie('les indices sont effacés', e.clues.length === 0);
   verifie('la raison est journalisée', e.log.join(' ').includes('Plus assez'), e.log);
   verifie('rien à interrompre dans le salon', R.partieInjouable(e) === false);
+}
+
+groupe('Sélection groupée des catégories');
+{
+  const toutes = ['Animaux', 'Sport', 'Cuisine', 'Musique'];
+  const tri = a => [...a].sort();
+
+  verifie('« aucune » sans filtre écarte tout',
+          tri(R.appliquerCats([], toutes, 'none', toutes)).join() === tri(toutes).join());
+  verifie('« tout » sans filtre rétablit tout',
+          R.appliquerCats(toutes, toutes, 'all', toutes).length === 0);
+
+  /* le cas qui compte : une recherche est active, la commande ne doit porter
+     que sur ce qui est affiché */
+  const apres = R.appliquerCats([], ['Sport'], 'none', toutes);
+  verifie('« aucune » filtré n\'écarte que l\'affiché', apres.join() === 'Sport', apres);
+
+  const cumul = R.appliquerCats(apres, ['Animaux'], 'none', toutes);
+  verifie('une seconde recherche s\'ajoute sans effacer la première',
+          tri(cumul).join() === 'Animaux,Sport', cumul);
+
+  const rendu = R.appliquerCats(cumul, ['Sport'], 'all', toutes);
+  verifie('« tout » filtré ne rétablit que l\'affiché', rendu.join() === 'Animaux', rendu);
+
+  const inv = R.appliquerCats(['Sport'], ['Sport', 'Cuisine'], 'invert', toutes);
+  verifie('« inverser » filtré bascule les deux sens', tri(inv).join() === 'Cuisine', inv);
+
+  /* la liste vient du client : on ne s'y fie pas */
+  const triche = R.appliquerCats([], ['Catégorie Inventée', 'Sport'], 'none', toutes);
+  verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
+  verifie('une action inconnue ne change rien',
+          R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
 }
 
 groupe('Chat différentiel');

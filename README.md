@@ -135,6 +135,30 @@ qui a parlé (✓), qui parle et qui attend ; celui dont c'est le tour apparaît
 grand sous un projecteur qui respire, avec trois points animés ; les indices
 déjà donnés se posent au centre comme des fiches légèrement de travers.
 
+## Choisir les catégories
+
+184 catégories, c'est trop pour l'œil. Une **barre de recherche** filtre la liste
+à la volée, accents et casse ignorés (« ecole » trouve « École »). Le filtre est
+purement local à chaque navigateur : il ne touche pas aux réglages et ne transite
+pas sur le réseau.
+
+Quand une recherche est active, **« Tout / Aucune / Inverser » ne portent que sur
+ce qui est affiché**, et leur libellé le dit (« Aucune (5) »). Sinon, chercher
+« sport » puis cliquer « Aucune » viderait toute la banque au lieu d'écarter les
+cinq catégories qu'on visait. L'hôte vérifie chaque nom reçu contre la banque :
+la liste vient du client, on ne s'y fie pas. La décision vit dans
+`R.appliquerCats`, couverte par les tests.
+
+Le panneau lui-même a déménagé. À droite, sous les dix lignes de réglages, il ne
+restait que 150 px de haut : **huit catégories visibles sur 184**, dans une liste
+qui défilait à l'intérieur d'une colonne qui défilait déjà. En salon, la colonne
+de gauche n'affiche plus la liste des joueurs — elle est dans la scène centrale —
+donc le panneau y passe et récupère une colonne entière : **vingt-deux catégories
+visibles**, un seul ascenseur. La colonne de gauche retrouve du même coup le
+bouton du son, l'état du réseau et « quitter le salon », qui disparaissaient
+purement et simplement du salon. Sur écran étroit, tout s'empile et le panneau
+reste à sa place d'origine.
+
 ## Retrouver son siège
 
 L'identité d'un joueur tient dans un jeton, à deux niveaux :
@@ -214,6 +238,15 @@ glisser un imposteur en cours de route changerait l'équilibre annoncé au
 lancement et pourrait renverser la majorité civile sans que personne ne l'ait
 décidé. Son entrée est inscrite au journal de la manche, pour que les autres
 sachent qu'un joueur de plus est à la table.
+
+## Exclure un joueur, et le reprendre
+
+Exclure bannit le jeton du joueur — sans ça, sa reconnexion automatique le
+ramènerait dans la seconde. Mais une exclusion n'est pas un jugement définitif :
+l'hôte garde sous les yeux, dans le salon, la liste des exclus avec un bouton
+**Réadmettre**. Le joueur n'a plus qu'à rouvrir le lien d'invitation. Le message
+qu'il reçoit conserve le code du salon dans l'adresse, pour qu'il n'ait pas à le
+redemander.
 
 ## Si les joueurs partent
 

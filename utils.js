@@ -95,4 +95,9 @@ function overlay(em, title, sub) {
   $('#ovEm').textContent = em; $('#ovTitle').textContent = title; $('#ovSub').textContent = sub || '';
   $('#overlay').hidden = false;
 }
-$('#ovBtn').onclick = () => location.href = location.pathname;
+/* On garde le code du salon dans l'adresse : un joueur exclu puis réadmis n'a
+   plus qu'à retaper son pseudo, sans avoir à redemander le numéro de dossier. */
+let ovCode = null;
+$('#ovBtn').onclick = () => {
+  location.href = location.pathname + (ovCode ? '?s=' + ovCode : '');
+};

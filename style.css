@@ -51,19 +51,23 @@ h1,h2,h3{margin:0;font-family:var(--dossier);font-weight:600;letter-spacing:.02e
 }
 body.playing #home{display:none}
 body.playing #game{display:grid}
-/* dans le salon, la colonne de gauche remonte au centre : plus de vide */
-body[data-phase="lobby"] #game,body[data-phase="end"] #game{grid-template-columns:minmax(0,1fr) 348px}
-body[data-phase="lobby"] .col.left,body[data-phase="end"] .col.left{display:none}
-/* ...sauf s'il faut y afficher la reprise de main, sinon elle serait invisible
-   quand l'hôte disparaît avant le lancement. */
-body.relance .col.left{display:flex}
+/* Dans le salon, la liste des joueurs vit dans la scène centrale : son panneau
+   de gauche ferait doublon. Mais la colonne, elle, reste — c'est là que passe
+   le panneau des catégories (voir ui.js), qui étouffait à droite sous les
+   réglages. Elle garde aussi le son, l'état du réseau et la reprise de main,
+   qui disparaissaient purement et simplement du salon. */
+body[data-phase="lobby"] #playersPanel,body[data-phase="end"] #playersPanel{display:none}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
 .col.center{justify-content:flex-start}
-/* La scène et le chat se partagent la hauteur de la colonne centrale : deux
-   tiers / un tiers, chacun défilant chez lui plutôt que d'allonger la page. */
+/* La scène et le chat se partagent la hauteur de la colonne centrale. La base
+   était figée (flex-basis 0) : au-delà de quatre joueurs la grille du salon
+   passait à deux lignes, le contenu dépassait le cadre et le bouton « Lancer »
+   se retrouvait peint DERRIÈRE le panneau de chat — présent, cliquable, mais
+   invisible. La base suit désormais le contenu, et la scène défile chez elle si
+   la fenêtre est vraiment courte. */
 /* Désigné par sa classe et non par sa position : sur écran étroit la carte de
    rôle se glisse devant lui, et « :first-child » lui refilait l'étirement. */
-.col.center>.scenepan{flex:2 1 0;min-height:360px;display:flex;flex-direction:column}
+.col.center>.scenepan{flex:2 1 auto;min-height:360px;display:flex;flex-direction:column}
 .col.center>#rolePanel{flex:0 0 auto}
 
 /* ---------------- fiches ---------------- */
@@ -217,7 +221,10 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 .chrono.urgent .chrono-bar i{background:var(--stamp)}
 .chrono.urgent span{color:var(--stamp)}
 .stage{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;
-  padding:30px 18px;justify-content:center}
+  padding:30px 18px;min-height:0;overflow-y:auto;
+  /* « safe » : quand ça dépasse, on aligne en haut au lieu de centrer — sinon
+     le débordement part vers le haut, hors d'atteinte du défilement. */
+  justify-content:safe center}
 .stage h2{font-size:clamp(23px,3.2vw,34px)}
 .big{font-family:var(--dossier);font-size:clamp(32px,6vw,52px);font-weight:600;letter-spacing:.02em;word-break:break-word}
 .em{font-size:50px;line-height:1;filter:saturate(.85)}
@@ -401,3 +408,24 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
   .hero .plate .val{font-size:44px}
   .logo{font-size:42px}
 }
+
+/* Liste des joueurs exclus (salon, hôte seulement) : une exclusion se défait. */
+.exclus{width:100%;max-width:420px;border:1px solid var(--line);border-radius:3px;
+  padding:10px 12px;margin-top:10px;background:#12141b}
+.exclus .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:var(--dim2);
+  text-transform:uppercase;margin-bottom:8px}
+.exc{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}
+.exc span{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exc .btn{max-width:132px;margin:0;flex:none}
+.exclus .mini{margin-top:6px;text-align:left}
+
+/* Recherche de catégorie — 184 pastilles, l'œil ne suffit plus. */
+.catsearch{position:relative;margin-bottom:8px}
+.catsearch input{width:100%;background:#0c0e13;border:1px solid var(--line);border-radius:3px;
+  color:var(--ink);font-family:inherit;font-size:13px;padding:7px 28px 7px 10px}
+.catsearch input:focus{outline:none;border-color:var(--brass)}
+.catsearch input::-webkit-search-cancel-button{display:none}
+.catsearch button{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  background:none;border:0;color:var(--dim2);cursor:pointer;font-size:12px;padding:4px 6px;line-height:1}
+.catsearch button:hover{color:var(--ink)}
+.cats .vide{color:var(--dim2);font-size:13px;padding:6px 2px}

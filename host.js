@@ -94,8 +94,8 @@ function onHostMessage(conn, msg) {
     if (conn === null) return;
     // reconnexion : on retrouve le joueur par son jeton
     // reconnexion uniquement si ce jeton correspond a un joueur actuellement absent
-    if ((S.bannis || []).includes(msg.token)) {
-      conn.send({ t: 'err', m: 'Tu as été exclu de ce salon.' });
+    if ((S.bannis || []).some(b => b.token === msg.token)) {
+      conn.send({ t: 'err', m: "Tu as été exclu de ce salon. L'hôte peut te réadmettre.", code: S.code });
       setTimeout(() => conn.close(), 400); return;
     }
     /* On rend son siège si le jeton correspond à quelqu'un d'absent — ou dont
@@ -151,9 +151,11 @@ function onHostMessage(conn, msg) {
         S.cfg.off = [...off];
       }
       if (msg.k === 'cats') {                      // tout / aucune / inverser
-        if (msg.v === 'all')    S.cfg.off = [];
-        if (msg.v === 'none')   S.cfg.off = CATS.map(c => c.name);
-        if (msg.v === 'invert') { const off = new Set(S.cfg.off || []); S.cfg.off = CATS.filter(c => !off.has(c.name)).map(c => c.name); }
+        /* La commande porte sur une LISTE : quand une recherche est active, elle
+           ne contient que les catégories affichées. Sans liste, c'est tout. */
+        const toutes = CATS.map(c => c.name);
+        const cible = Array.isArray(msg.v && msg.v.noms) ? msg.v.noms : toutes;
+        S.cfg.off = R.appliquerCats(S.cfg.off, cible, (msg.v && msg.v.action) || msg.v, toutes);
       }
       lsSet('uc_cfg', S.cfg); broadcastViews(); break;
 
@@ -231,15 +233,26 @@ function onHostMessage(conn, msg) {
       if (!isHost || S.phase !== 'clue') return;
       S.turn++; hostNudge(); break;
 
+    case 'readmettre': {                           // l'hôte rouvre la porte
+      if (!isHost) return;
+      const banni = (S.bannis || []).find(b => b.token === msg.token);
+      if (!banni) return;
+      S.bannis = S.bannis.filter(b => b.token !== msg.token);
+      pushLog(banni.name + ' peut de nouveau rejoindre.');
+      broadcastViews(); break;
+    }
+
     case 'kick': {
       if (!isHost) return;
       const v = byId(msg.id);
       if (!v || v.id === HOST_ID) return;
       NET.conns.get(v.id)?.close();
       NET.conns.delete(v.id);
-      /* Sans ça, sa reconnexion automatique le ferait revenir aussitôt. */
+      /* Sans ça, sa reconnexion automatique le ferait revenir aussitôt. On
+         retient son nom avec son jeton : l'hôte doit pouvoir le rappeler, une
+         exclusion est rarement définitive dans une soirée entre amis. */
       S.bannis = S.bannis || [];
-      if (v.token && !S.bannis.includes(v.token)) S.bannis.push(v.token);
+      if (v.token && !S.bannis.some(b => b.token === v.token)) S.bannis.push({ token: v.token, name: v.name });
 
       if (canConfigure()) {                      // hors partie : on le retire purement
         S.players = S.players.filter(x => x.id !== v.id);
@@ -340,6 +353,8 @@ function viewFor(id) {
     cfgAdvice: canConfigure() ? cfgAdvice() : null,
     reste: S.deadline ? Math.max(0, S.deadline - Date.now()) : null,  // ms : horloges non synchronisées
     creux: S.creuxDepuis ? Math.max(0, DELAI_ABANDON - (Date.now() - S.creuxDepuis)) : null,
+    /* Seul l'hôte voit qui il a exclu — c'est lui qui peut les rappeler. */
+    bannis: id === HOST_ID ? (S.bannis || []) : null,
   }, dest ? (dest.chatVu || 0) : 0);
   return vue;
 }
@@ -357,7 +372,7 @@ function onClientMessage(msg) {
     if (msg.token) retenirJeton(msg.code, msg.token);
     return;
   }
-  if (msg.t === 'err')     { overlay('🚫', 'Impossible de rejoindre', msg.m); return; }
+  if (msg.t === 'err')     { ovCode = msg.code || NET.code; overlay('🚫', 'Impossible de rejoindre', msg.m); return; }
   if (msg.t === 'state')   {
     CHAT = msg.v.chatPlein ? msg.v.chat : CHAT.concat(msg.v.chat);
     if (CHAT.length > 60) CHAT = CHAT.slice(-60);

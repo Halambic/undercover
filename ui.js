@@ -4,6 +4,15 @@
    ============================================================================ */
 let blurWord = false;
 
+/* Recherche de catégorie : purement locale à chaque navigateur, elle ne touche
+   pas aux réglages. `R.norm` ignore accents, casse et ponctuation, donc « ecole »
+   trouve « École ». */
+let filtreCat = '';
+const catsVisibles = () => {
+  const q = R.norm(filtreCat);
+  return q ? CATS.filter(c => R.norm(c.name).includes(q)) : CATS;
+};
+
 /* Le seuil est le même que celui de la feuille de style : au-delà, les
    colonnes s'empilent au lieu de se juxtaposer. */
 const etroit = () => window.matchMedia('(max-width:1080px)').matches;
@@ -225,21 +234,46 @@ function render() {
     const h = $('#cfgHint'); h.hidden = !!V.cfgError || !V.cfgAdvice; h.textContent = V.cfgAdvice || '';
   }
 
-  /* --- catégories --- */
+  /* --- catégories ---
+     À droite, sous les dix lignes de réglages, il ne restait que 150 px : huit
+     catégories visibles sur 184. En salon la colonne de gauche n'affiche plus la
+     liste des joueurs (elle est dans la scène) — le panneau y déménage et récupère
+     une colonne entière. Sur écran étroit tout s'empile : il reste où il est. */
   const cp2 = $('#catPanel'); cp2.hidden = !(V.phase === 'lobby' || V.phase === 'end');
+  const auLarge = !cp2.hidden && !etroit();
+  const zoneCat = auLarge ? $('.col.left') : $('.col.right');
+  if (cp2.parentElement !== zoneCat) {
+    /* à droite, il reprend sa place entre les réglages et les scores */
+    auLarge ? zoneCat.append(cp2) : zoneCat.insertBefore(cp2, $('#scorePanel'));
+  }
   if (!cp2.hidden) {
     const off = new Set(V.cfg.off || []);
     const dispo = countPairs(V.cfg);
-    $('#catCount').textContent = dispo.toLocaleString('fr-FR') + ' paires';
+    $('#catCount').textContent = R.norm(filtreCat)
+      ? catsVisibles().length + ' sur ' + CATS.length
+      : dispo.toLocaleString('fr-FR') + ' paires';
     $('#catBar').style.display = V.isHost ? '' : 'none';
+    const vues = catsVisibles();
     const cl = $('#catList'); cl.innerHTML = '';
-    CATS.forEach(c => {
+    if (!vues.length) cl.append(el('div', 'vide', 'Aucune catégorie ne correspond.'));
+    vues.forEach(c => {
       const b = el(V.isHost ? 'button' : 'div', 'cat' + (off.has(c.name) ? ' off' : ''));
       b.append(el('span', 'ic', ICONS[c.name] || '▪'), el('span', null, c.name), el('i', null, c.count));
       if (V.isHost) b.onclick = () => send({ t: 'cfg', k: 'cat', v: { name: c.name, on: off.has(c.name) } });
       cl.append(b);
     });
     majFondus(cl);
+    /* Quand on cherche, les boutons groupés ne portent que sur ce qui est
+       affiché — sinon « Aucune » après une recherche viderait toute la banque
+       alors qu'on voulait juste écarter trois catégories. Le libellé le dit. */
+    const filtre = !!R.norm(filtreCat);
+    $('#catClear').hidden = !filtre;
+    $$('#catBar button').forEach(b => {
+      const nom = { all: 'Tout', none: 'Aucune', invert: 'Inverser' }[b.dataset.c];
+      b.textContent = filtre ? nom + ' (' + vues.length + ')' : nom;
+      b.title = filtre ? nom.toLowerCase() + ' parmi les ' + vues.length + ' catégories affichées'
+                       : nom.toLowerCase() + ' parmi les ' + CATS.length + ' catégories';
+    });
   }
 
   /* --- scores --- */
@@ -312,6 +346,22 @@ function renderStage() {
     }
     add(g);
     if (!manque) add(el('p', 'mini', `Vous pouvez lancer, ou attendre jusqu'à ${MAX_JOUEURS} joueurs.`));
+
+    /* Exclure quelqu'un ne doit pas être définitif : l'hôte garde la liste
+       sous les yeux et peut rouvrir la porte d'un clic. */
+    if (V.isHost && V.bannis && V.bannis.length) {
+      const box = el('div', 'exclus');
+      box.append(el('div', 'tt', V.bannis.length > 1 ? 'Joueurs exclus' : 'Joueur exclu'));
+      V.bannis.forEach(x => {
+        const l = el('div', 'exc');
+        const r = el('button', 'btn ghost sm', 'Réadmettre');
+        r.onclick = () => send({ t: 'readmettre', token: x.token });
+        l.append(el('span', null, x.name), r);
+        box.append(l);
+      });
+      box.append(el('p', 'mini', 'Il devra rouvrir le lien d\'invitation pour revenir.'));
+      add(box);
+    }
 
     if (V.isHost) {
       const b = el('button', 'btn mt2', 'Lancer la partie');
@@ -518,7 +568,18 @@ $$('#cfgPanel [data-i],#cfgPanel [data-d]').forEach(b => b.onclick = () => {
   send({ t: 'cfg', k, v: b.dataset.i ? 1 : -1 });      // direction, jamais une valeur
 });
 $$('#cfgPanel .sw').forEach(s => s.onclick = () => send({ t: 'cfg', k: s.dataset.t, v: !V.cfg[s.dataset.t] }));
-$$('#catBar button').forEach(b => b.onclick = () => send({ t: 'cfg', k: 'cats', v: b.dataset.c }));
+$$('#catBar button').forEach(b => b.onclick = () =>
+  send({ t: 'cfg', k: 'cats', v: { action: b.dataset.c, noms: catsVisibles().map(c => c.name) } }));
+
+/* La saisie vit hors de #catList, qui est reconstruit à chaque vue : le curseur
+   et le focus ne bougent pas pendant qu'on tape. */
+$('#catSearch').oninput = e => { filtreCat = e.target.value; if (V) render(); };
+$('#catSearch').onkeydown = e => {
+  if (e.key === 'Escape') { filtreCat = ''; e.target.value = ''; if (V) render(); }
+};
+$('#catClear').onclick = () => {
+  filtreCat = ''; $('#catSearch').value = ''; $('#catSearch').focus(); if (V) render();
+};
 $('#btnCopy').onclick = async () => {
   const url = location.origin + location.pathname + '?s=' + NET.code;
   try { await navigator.clipboard.writeText(url); toast('Lien d\'invitation copié'); }
