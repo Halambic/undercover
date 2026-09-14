@@ -160,6 +160,28 @@ bouton du son, l'état du réseau et « quitter le salon », qui disparaissaient
 purement et simplement du salon. Sur écran étroit, tout s'empile et le panneau
 reste à sa place d'origine.
 
+## Ce qu'une élimination révèle
+
+**Un rôle, jamais un mot.** Le mot de l'éliminé voyageait encore dans la vue de
+tout le monde : Mr White recevait donc, écrit noir sur blanc, le mot des civils
+qu'il est censé deviner, et l'Undercover apprenait le mot adverse dès la première
+élimination. Les deux mots ne sortent qu'à la fin de la partie.
+
+Le test anti-triche d'origine ne balayait que la phase des indices ; c'est ce
+trou qui a laissé passer la fuite. Il parcourt maintenant **toutes** les phases —
+indices, discussion, vote, révélation, devinette — et vérifie pour chaque joueur
+qu'aucun mot qu'il n'a pas à connaître n'apparaît nulle part dans sa vue.
+
+## Le chat après la partie
+
+Un éliminé lit sans écrire : il connaît son rôle et celui de sa victime, il
+pourrait orienter la fin. Mais **une fois la partie terminée, tout le monde
+retrouve la parole** — tout est révélé, la règle n'a plus d'objet. Sans ça, celui
+que le dernier vote venait d'éliminer se retrouvait muet pile au moment des
+commentaires d'après-partie, son message à moitié tapé coincé dans un champ
+désactivé. La règle vit dans `R.peutParler` et voyage dans la vue : l'interface
+ne la redécide pas dans son coin.
+
 ## Les trois minuteurs
 
 | Réglage | Portée |

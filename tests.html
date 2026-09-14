@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=10"></script>
+<script src="rules.js?v=12"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -528,6 +528,105 @@ groupe('Sélection groupée des catégories');
   verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
   verifie('une action inconnue ne change rien',
           R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
+}
+
+groupe('Anti-triche : les mots ne fuient à aucune phase');
+{
+  const MOT_CIVIL = 'Marmotte', MOT_UNDER = 'Musaraigne';
+  const neuf = () => {
+    const e = partie(['civil', 'under', 'white', 'civil', 'civil']);
+    e.pair = { civil: MOT_CIVIL, under: MOT_UNDER, cat: 'Animaux' };
+    R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+    return e;
+  };
+  const motAutorise = r => r === 'civil' ? MOT_CIVIL : r === 'under' ? MOT_UNDER : null;
+
+  /* Balaie la vue de CHAQUE joueur et signale tout mot qu'il n'a pas à connaître. */
+  const fuites = e => {
+    const out = [];
+    e.players.forEach(moi => {
+      const txt = JSON.stringify(R.projeter(e, moi.id));
+      const permis = motAutorise(moi.role);
+      [MOT_CIVIL, MOT_UNDER].forEach(mot => {
+        if (txt.includes(mot) && mot !== permis) out.push(e.phase + ' : ' + moi.role + ' voit « ' + mot + ' »');
+      });
+    });
+    return out;
+  };
+
+  const e = neuf();
+  verifie('phase des indices : aucune fuite', fuites(e).length === 0, fuites(e));
+
+  e.phase = 'debate';
+  verifie('discussion : aucune fuite', fuites(e).length === 0, fuites(e));
+
+  e.phase = 'vote'; e.players.forEach(p => p.voted = 'p0');
+  verifie('vote : aucune fuite', fuites(e).length === 0, fuites(e));
+
+  /* le cas signalé : un civil est éliminé */
+  R.depouiller(e);
+  verifie('un civil vient d\'être éliminé', e.elim.role === 'civil' && e.phase === 'reveal');
+  verifie('révélation : le mot de l\'éliminé ne fuit pas', fuites(e).length === 0, fuites(e));
+  const vueWhite = R.projeter(e, e.players.find(p => p.role === 'white').id);
+  verifie('Mr White voit le rôle de l\'éliminé', vueWhite.elim.role === 'civil');
+  verifie('mais pas son mot', vueWhite.elim.word === undefined, vueWhite.elim);
+
+  /* un Undercover éliminé ne livre pas son mot non plus */
+  const f = neuf();
+  f.phase = 'vote';
+  const und = f.players.find(p => p.role === 'under');
+  f.players.forEach(p => p.voted = und.id);
+  R.depouiller(f);
+  verifie('un Undercover éliminé ne livre pas son mot', fuites(f).length === 0, fuites(f));
+
+  /* phase de devinette de Mr White */
+  const g = neuf();
+  g.phase = 'vote';
+  const mw = g.players.find(p => p.role === 'white');
+  g.players.forEach(p => p.voted = mw.id);
+  R.depouiller(g);
+  R.apresElimination(g);
+  verifie('on passe bien à la devinette', g.phase === 'guess', g.phase);
+  verifie('devinette : Mr White n\'a toujours pas le mot', fuites(g).length === 0, fuites(g));
+
+  /* à la fin, tout est public */
+  const h = neuf();
+  R.terminer(h, 'civils');
+  const vues = h.players.map(p => JSON.stringify(R.projeter(h, p.id)));
+  verifie('fin de partie : les deux mots sont publics',
+          vues.every(v => v.includes(MOT_CIVIL) && v.includes(MOT_UNDER)));
+}
+
+groupe('Qui peut parler dans le chat');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  verifie('en manche, un vivant parle', R.peutParler(e, 'p0') === true);
+
+  R.parId(e, 'p1').alive = false;
+  verifie('un éliminé est muet', R.peutParler(e, 'p1') === false);
+  verifie('et la vue le lui dit', R.projeter(e, 'p1').muet === true);
+
+  e.players.push({ id: 'tard', name: 'Tardif', role: null, alive: false, pending: true,
+                   connected: true, score: 0, voted: null, revealed: false });
+  verifie('un retardataire parle : il ne sait rien', R.peutParler(e, 'tard') === true);
+
+  /* le cas signalé : le vote qui termine la partie élimine celui qui écrivait */
+  R.terminer(e, 'civils');
+  verifie('partie finie : l\'éliminé retrouve la parole', R.peutParler(e, 'p1') === true);
+  verifie('la vue ne le déclare plus muet', R.projeter(e, 'p1').muet === false);
+  verifie('tout le monde peut parler',
+          e.players.every(p => R.peutParler(e, p.id)), e.players.map(p => p.name + ':' + R.peutParler(e, p.id)));
+
+  /* de retour au salon après une manche interrompue, pareil */
+  const f = partie(['civil', 'civil', 'under', 'civil']);
+  R.demarrerManche(f, { pair: f.pair, roles: f.players.map(p => p.role) });
+  R.parId(f, 'p2').alive = false;
+  R.interrompre(f, 'test');
+  verifie('au salon aussi, personne n\'est muet',
+          f.players.every(p => R.peutParler(f, p.id)));
+
+  verifie('un inconnu ne parle pas', R.peutParler(f, 'fantome') === false);
 }
 
 groupe('Chat différentiel');

@@ -193,10 +193,11 @@ function render() {
     if (avaitFocus) $('#chatInput').focus();
   }
   ch.classList.toggle('large', auCentre);
-  const moi = V.players.find(p => p.id === V.me);
-  const muet = moi && !moi.alive && !moi.pending;
+  /* La règle est tranchée par rules.js et voyage dans la vue : l'interface ne
+     la redécide pas dans son coin. */
+  const muet = !!V.muet;
   $('#chatNote').textContent = muet ? 'éliminé : lecture seule' : '';
-  $('#chatInput').disabled = !!muet;
+  $('#chatInput').disabled = muet;
   $('#chatInput').placeholder = muet ? 'Tu ne peux plus parler' : 'Écrire…';
   const cl2 = $('#chatList');
   cl2.innerHTML = '';
@@ -487,7 +488,12 @@ function renderStage() {
       add(el('h2', null, V.elim.name + ' est éliminé'));
       const b = el('div'); b.append(el('span', 'badge ' + ROLE[V.elim.role].cls, ROLE[V.elim.role].label.toUpperCase()));
       add(b);
-      add(el('p', 'mini', V.elim.role === 'white' ? 'Il n\'avait aucun mot.' : 'Son mot : ' + V.elim.word));
+      /* Le mot n'est pas transmis avant la fin (voir projeter) : on ne l'affiche
+         que s'il est là, et on dit pourquoi le reste du temps. */
+      add(el('p', 'mini',
+        V.elim.role === 'white' ? 'Il n\'avait aucun mot.'
+        : V.elim.word ? 'Son mot : ' + V.elim.word
+        : 'Les mots seront dévoilés à la fin de la partie.'));
     }
     /* qui a voté contre qui : de quoi lancer la manche suivante */
     if (V.votes && V.votes.length) {

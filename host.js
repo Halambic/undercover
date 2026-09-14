@@ -204,9 +204,7 @@ function onHostMessage(conn, msg) {
     case 'chat': {
       const txt = (msg.text || '').toString().replace(/\s+/g, ' ').trim().slice(0, 200);
       if (!txt) return;
-      /* Les éliminés lisent sans écrire : ils connaissent leur rôle et pourraient
-         orienter la fin de partie. Un retardataire, lui, ne sait rien : il parle. */
-      if (!p.alive && !p.pending) return;
+      if (!R.peutParler(S, p.id)) return;
       if (Date.now() - (p.dernierMsg || 0) < 700) return;    // garde-fou anti-spam
       p.dernierMsg = Date.now();
       S.chat.push({ id: p.id, name: p.name, text: txt, ts: Date.now(), n: ++S.chatSeq });

@@ -372,6 +372,24 @@ window.UC_RULES = (() => {
     return true;
   }
 
+  /**
+   * Qui a le droit d'écrire dans le chat. Un éliminé lit sans écrire : il
+   * connaît son rôle et celui de sa victime, il pourrait orienter la fin. Un
+   * retardataire, lui, ne sait rien et parle librement.
+   *
+   * Une fois la partie terminée — ou de retour au salon — tout est révélé :
+   * la règle n'a plus d'objet et TOUT LE MONDE retrouve la parole. Sans ça,
+   * celui que le dernier vote venait d'éliminer se retrouvait muet pile au
+   * moment des commentaires d'après-partie, son message à moitié tapé coincé
+   * dans un champ désactivé.
+   */
+  function peutParler(e, id) {
+    const p = parId(e, id);
+    if (!p) return false;
+    if (e.phase === 'end' || e.phase === 'lobby') return true;
+    return !!(p.alive || p.pending);
+  }
+
   /* ---- projection des vues ---------------------------------------------
      LE point sensible du jeu : c'est ici que se joue l'anti-triche. Chaque
      joueur reçoit une vue filtrée de l'état ; personne ne doit jamais y trouver
@@ -397,12 +415,19 @@ window.UC_RULES = (() => {
       minuteur: e.phase === 'clue' ? e.cfg.tClue : e.phase === 'debate' ? e.cfg.tDebate
               : e.phase === 'vote' ? e.cfg.tVote : 0,
       clues: (e.clues || []).map(c => ({ round: c.round, name: nomDe(c.id), text: c.text, mine: c.id === id })),
-      tie: e.tie, elim: e.elim,
+      tie: e.tie,
+      /* Une élimination révèle un RÔLE, pas un mot. Le mot y voyageait encore :
+         Mr White recevait donc, écrit noir sur blanc, le mot des civils qu'il
+         est censé deviner, et l'Undercover apprenait le mot adverse dès la
+         première élimination. Les mots ne sortent qu'à la fin. */
+      elim: e.elim && (toutVoir ? e.elim
+                                : { id: e.elim.id, role: e.elim.role, name: e.elim.name }),
       tally: (e.phase === 'reveal' || e.phase === 'end') ? e.lastTally : null,
       votes: (e.phase === 'reveal' || e.phase === 'end')
         ? (e.lastVotes || []).map(v => ({ de: nomDe(v.de), vers: v.vers ? nomDe(v.vers) : null }))
         : null,
       result: e.result, log: e.log || [],
+      muet: !peutParler(e, id),
       /* Différentiel : seulement ce que ce joueur n'a pas encore reçu.
          `chatPlein` prévient le client qu'il s'agit d'un envoi complet.
          Un message sans numéro vient d'une sauvegarde antérieure au différentiel :
@@ -423,5 +448,6 @@ window.UC_RULES = (() => {
            awardScores, guessOk, projeter,
            parId, vivants, votants, journal, dureePhase, armer, demarrerManche,
            depouiller, apresElimination, terminer, avancer, echeance, tourSuivant,
+           peutParler,
            MIN_EN_JEU, joueursEnJeu, partieInjouable, interrompre };
 })();
