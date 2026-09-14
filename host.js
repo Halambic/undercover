@@ -171,7 +171,7 @@ function onHostMessage(conn, msg) {
       if (!txt) return;
       S.clues.push({ round: S.round, id: p.id, text: txt });
       p.clue = txt;
-      S.turn++;
+      R.tourSuivant(S);                  // le suivant repart sur son temps plein
       hostNudge(); break;
     }
 
@@ -231,7 +231,7 @@ function onHostMessage(conn, msg) {
 
     case 'skip':                                   // l'hote debloque un joueur absent ou muet
       if (!isHost || S.phase !== 'clue') return;
-      S.turn++; hostNudge(); break;
+      R.tourSuivant(S); hostNudge(); break;
 
     case 'readmettre': {                           // l'hôte rouvre la porte
       if (!isHost) return;

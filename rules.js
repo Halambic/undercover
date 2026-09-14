@@ -209,6 +209,19 @@ window.UC_RULES = (() => {
          : e.phase === 'vote' ? e.cfg.tVote : 0;
   }
 
+  /**
+   * Passe au joueur suivant. Le minuteur par indice est un temps de parole
+   * INDIVIDUEL : chacun repart à zéro. Effacer l'échéance ici est ce qui le
+   * garantit — `avancer` ne peut pas deviner qu'on a changé de tour, puisqu'il
+   * compare le tour à un instantané pris après coup, et le suivant héritait
+   * alors du reliquat de son prédécesseur.
+   */
+  function tourSuivant(e) {
+    e.turn++;
+    e.deadline = null;
+    return e;
+  }
+
   function armer(e, maintenant) {
     const sec = dureePhase(e);
     e.deadline = sec ? maintenant + sec * 1000 : null;
@@ -349,7 +362,7 @@ window.UC_RULES = (() => {
   function echeance(e, maintenant) {
     if (!e || !e.deadline || maintenant < e.deadline) return false;
     e.deadline = null;
-    if (e.phase === 'clue') e.turn++;
+    if (e.phase === 'clue') tourSuivant(e);
     else if (e.phase === 'debate') { e.phase = 'vote'; e.players.forEach(p => p.voted = null); }
     else if (e.phase === 'vote') {                // les silencieux s'abstiennent
       journal(e, 'Temps écoulé — dépouillement des votes exprimés.');
@@ -409,6 +422,6 @@ window.UC_RULES = (() => {
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,
            parId, vivants, votants, journal, dureePhase, armer, demarrerManche,
-           depouiller, apresElimination, terminer, avancer, echeance,
+           depouiller, apresElimination, terminer, avancer, echeance, tourSuivant,
            MIN_EN_JEU, joueursEnJeu, partieInjouable, interrompre };
 })();

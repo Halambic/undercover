@@ -160,6 +160,26 @@ bouton du son, l'état du réseau et « quitter le salon », qui disparaissaient
 purement et simplement du salon. Sur écran étroit, tout s'empile et le panneau
 reste à sa place d'origine.
 
+## Les trois minuteurs
+
+| Réglage | Portée |
+|---|---|
+| **Minuteur par indice** | le temps de parole **de chaque joueur**, remis à neuf à chaque tour |
+| **Minuteur de discussion** | la phase de débat, une fois par manche |
+| **Minuteur de vote** | le scrutin, et un départage repart sur un temps plein |
+
+Le premier était global sans le vouloir : il n'était remis à zéro que si le temps
+*expirait*. Dès que quelqu'un répondait avant la fin, le suivant héritait du
+reliquat — à 1 min, le deuxième joueur commençait avec 50 s, le troisième avec
+45. `avancer` décidait de réarmer en comparant le tour à un instantané pris à sa
+propre entrée, alors que le tour avait déjà été incrémenté par l'appelant : le
+changement lui était invisible.
+
+Le passage de tour vit maintenant dans `R.tourSuivant`, qui efface l'échéance en
+même temps qu'il avance. Un seul endroit, impossible à oublier, et couvert par
+les tests dans les quatre cas : réponse rapide, temps écoulé, joueur passé par
+l'hôte, absent sauté automatiquement.
+
 ## Retrouver son siège
 
 L'identité d'un joueur tient dans un jeton, à deux niveaux :

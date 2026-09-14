@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=9"></script>
+<script src="rules.js?v=10"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -390,6 +390,58 @@ groupe('Moteur — cas tordus');
   verifie('avec le mot des civils', t.word === e.pair.civil, t.word);
   verifie('son entrée est annoncée', e.log.join(' ').includes('Tardif entre en jeu'), e.log);
   verifie('il ne renverse pas la majorité civile', R.outcome(R.vivants(e)) === null);
+}
+
+groupe('Minuteur par indice : un temps de parole CHACUN');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  e.cfg.tClue = 60;
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  R.armer(e, 0);
+  verifie('le premier a ses 60 s', e.deadline === 60000, e.deadline);
+
+  /* il répond au bout de 10 s : le suivant ne doit PAS hériter des 50 s restantes */
+  R.tourSuivant(e); R.avancer(e, 10000);
+  verifie('réponse rapide : le suivant repart à 60 s',
+          e.deadline - 10000 === 60000, 'reste ' + (e.deadline - 10000) / 1000 + ' s');
+
+  R.tourSuivant(e); R.avancer(e, 15000);
+  verifie('et le troisième aussi', e.deadline - 15000 === 60000,
+          'reste ' + (e.deadline - 15000) / 1000 + ' s');
+
+  /* temps écoulé : le suivant repart neuf lui aussi */
+  const f = partie(['civil', 'civil', 'under', 'civil']);
+  f.cfg.tClue = 30;
+  R.demarrerManche(f, { pair: f.pair, roles: f.players.map(p => p.role) });
+  R.armer(f, 0);
+  R.echeance(f, 30000);
+  verifie('temps écoulé : on passe au suivant', f.turn === 1, f.turn);
+  verifie('avec ses 30 s entières', f.deadline - 30000 === 30000,
+          'reste ' + (f.deadline - 30000) / 1000 + ' s');
+
+  /* l'hôte passe un joueur muet : même règle */
+  R.tourSuivant(f); R.avancer(f, 35000);
+  verifie('joueur passé par l\'hôte : 30 s pour le suivant',
+          f.deadline - 35000 === 30000, 'reste ' + (f.deadline - 35000) / 1000 + ' s');
+
+  /* un absent sauté automatiquement ne consomme le temps de personne */
+  const g = partie(['civil', 'civil', 'under', 'civil']);
+  g.cfg.tClue = 45;
+  R.demarrerManche(g, { pair: g.pair, roles: g.players.map(p => p.role) });
+  R.parId(g, g.order[1]).connected = false;
+  R.armer(g, 0);
+  R.tourSuivant(g); R.avancer(g, 5000);
+  verifie('l\'absent est sauté', g.turn === 2, g.turn);
+  verifie('et celui d\'après a ses 45 s', g.deadline - 5000 === 45000,
+          'reste ' + (g.deadline - 5000) / 1000 + ' s');
+
+  /* minuteur coupé : aucune échéance, quoi qu'il arrive */
+  const h = partie(['civil', 'civil', 'under', 'civil']);
+  h.cfg.tClue = 0;
+  R.demarrerManche(h, { pair: h.pair, roles: h.players.map(p => p.role) });
+  R.armer(h, 0);
+  R.tourSuivant(h); R.avancer(h, 1000);
+  verifie('minuteur coupé : pas d\'échéance', h.deadline === null, h.deadline);
 }
 
 groupe('Minuteur du départage');
