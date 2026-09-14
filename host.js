@@ -117,10 +117,10 @@ function onHostMessage(conn, msg) {
       if (!jeton || S.players.some(x => x.token === jeton)) jeton = rid() + rid();
       p = hostAddPlayer(rid(), jeton, msg.name);
       if (!canConfigure()) {
-        /* Arrivé en cours de partie : il regarde sans jouer et sera intégré
-           d'office à la manche suivante. */
+        /* Arrivé en cours de partie : il regarde sans jouer jusqu'à la fin de
+           la partie en cours, puis entre au prochain tirage. */
         p.alive = false; p.pending = true;
-        pushLog(p.name + ' rejoint — intégration à la prochaine manche.');
+        pushLog(p.name + ' rejoint — il entrera en jeu à la prochaine partie.');
       }
     }
     NET.conns.set(p.id, conn);

@@ -271,16 +271,20 @@ calcule la même palette, rien ne transite sur le réseau.
 
 ## Rejoindre en cours de partie
 
-Un retardataire n'est plus refusé : il entre comme **spectateur**, voit les
-indices et les votes se dérouler, et il est **intégré d'office à la manche
-suivante** (bandeau « tu entres en jeu à la prochaine »). Il peut parler dans le
-chat — contrairement aux éliminés, il ne connaît aucun secret.
+Un retardataire n'est pas refusé : il entre comme **spectateur**. Il voit les
+indices et les votes se dérouler, et il peut parler dans le chat — contrairement
+aux éliminés, il ne connaît aucun secret.
 
-Il entre **comme civil**, avec le mot des civils. Le choix n'est pas arbitraire :
-glisser un imposteur en cours de route changerait l'équilibre annoncé au
-lancement et pourrait renverser la majorité civile sans que personne ne l'ait
-décidé. Son entrée est inscrite au journal de la manche, pour que les autres
-sachent qu'un joueur de plus est à la table.
+Il entre en jeu **à la partie suivante**, pas à la manche suivante : les manches
+d'une même partie partagent les rôles et les mots tirés au lancement. L'intégrer
+entre deux manches changerait l'équilibre annoncé, et il aurait déjà entendu les
+indices et vu les votes des manches précédentes. Au prochain tirage, il reçoit un
+rôle au sort comme tout le monde — il n'est pas cantonné aux civils.
+
+Le vocabulaire compte ici, et il a déjà induit en erreur : une **partie** va du
+lancement à la victoire d'un camp ; une **manche** est un tour de table à
+l'intérieur de cette partie. Les libellés de l'interface disent « prochaine
+partie ».
 
 ## Exclure un joueur, et le reprendre
 

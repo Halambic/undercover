@@ -29,7 +29,7 @@ function playerRow(p, o = {}) {
   av.style.background = couleurDe(p.name);
   const nm = el('span', 'nm', p.name + (p.id === V.me ? ' (toi)' : ''));
   row.append(av, nm);
-  if (p.pending) row.append(el('span', 'badge b-wait', 'prochaine manche'));
+  if (p.pending) row.append(el('span', 'badge b-wait', 'prochaine partie'));
   else if (p.role) row.append(el('span', 'badge ' + ROLE[p.role].cls, ROLE[p.role].label));
   if (o.votes) row.append(el('span', 'votes', o.votes + '✕'));
   if (o.check) row.append(el('span', 'check', '✓'));
@@ -312,7 +312,7 @@ function renderStage() {
   if (V.you && V.you.pending && V.phase !== 'lobby' && V.phase !== 'end') {
     const b = el('div', 'attente');
     b.append(el('span', null, '⏳'), el('span', null,
-      'Tu observes la manche en cours — tu entres en jeu à la prochaine.'));
+      'Tu observes la partie en cours — tu entres en jeu à la prochaine.'));
     st.append(b);
   }
   const add = (...n) => st.append(...n);
@@ -457,7 +457,7 @@ function renderStage() {
                               : 'Tout le monde vote en même temps. Les votes sont révélés à la fin.'));
     if (!V.you.alive) {
       add(el('p', 'mini', V.you.pending
-        ? 'Tu entres en jeu à la manche suivante — ce vote ne te concerne pas.'
+        ? 'Tu entres en jeu à la prochaine partie — ce vote ne te concerne pas.'
         : 'Tu es éliminé — tu regardes la suite.'));
     }
     else {

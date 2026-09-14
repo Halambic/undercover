@@ -238,14 +238,10 @@ window.UC_RULES = (() => {
       });
       e.round = 0; e.clues = []; e.result = null; e.elim = null; e.log = [];
     }
-    /* Ceux qui ont rejoint en cours de partie entrent maintenant. On les fait
-       civils : glisser un imposteur en cours de route casserait l'équilibre
-       annoncé et pourrait renverser la majorité civile. */
-    e.players.filter(p => p.pending).forEach(p => {
-      p.pending = false; p.alive = true; p.revealed = false;
-      p.role = 'civil'; p.word = e.pair ? e.pair.civil : null;
-      journal(e, p.name + ' entre en jeu comme civil.');
-    });
+    /* Les spectateurs arrivés en cours restent spectateurs jusqu'à la fin de la
+       PARTIE : c'est la branche « pair » ci-dessus, au prochain tirage, qui les
+       fait entrer. Les intégrer entre deux manches changerait l'équilibre annoncé
+       au lancement, et ils ont déjà entendu les indices et vu les votes. */
     e.round++;
     e.tie = null;
     e.players.forEach(p => { p.voted = null; p.clue = null; });

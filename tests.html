@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=12"></script>
+<script src="rules.js?v=13"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -381,15 +381,21 @@ groupe('Moteur — cas tordus');
   R.avancer(e, 0);
   verifie('le spectateur reste hors du tour', e.order.length === 4 && !e.order.includes('tard'), e.order);
   verifie('il ne compte pas pour la victoire', R.outcome(R.vivants(e)) === null);
-  /* manche suivante de la MÊME partie : c'est le cas qui compte, un nouveau
-     tirage n'aurait rien prouvé. */
+  /* manche suivante de la MÊME partie : il reste spectateur. Injecter un joueur
+     en cours changerait l'équilibre annoncé au lancement, et il a déjà entendu
+     les indices et vu les votes. */
   R.demarrerManche(e);
   const t = R.parId(e, 'tard');
-  verifie('manche suivante : il entre en jeu', e.order.includes('tard') && !t.pending, e.order);
-  verifie('il entre comme civil', t.role === 'civil', t.role);
-  verifie('avec le mot des civils', t.word === e.pair.civil, t.word);
-  verifie('son entrée est annoncée', e.log.join(' ').includes('Tardif entre en jeu'), e.log);
-  verifie('il ne renverse pas la majorité civile', R.outcome(R.vivants(e)) === null);
+  verifie('manche suivante : il reste spectateur', t.pending === true && !t.alive, t);
+  verifie('et toujours hors du tour', !e.order.includes('tard'), e.order);
+  verifie('sans rôle ni mot', t.role === null && !t.word, t);
+  verifie('il ne pèse pas sur l\'issue', R.outcome(R.vivants(e)) === null);
+
+  /* c'est la partie SUIVANTE qui le fait entrer, avec un vrai rôle tiré au sort */
+  R.demarrerManche(e, { pair: e.pair, roles: ['civil', 'civil', 'civil', 'under', 'white'] });
+  verifie('nouvelle partie : il entre en jeu', !t.pending && t.alive && e.order.includes('tard'), e.order);
+  verifie('avec un rôle tiré au sort comme les autres', t.role === 'white', t.role);
+  verifie('tout le monde joue', e.order.length === 5, e.order.length);
 }
 
 groupe('Minuteur par indice : un temps de parole CHACUN');
