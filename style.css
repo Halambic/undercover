@@ -444,3 +444,12 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 .catscope{margin:0 0 8px;line-height:1.35;color:var(--dim2)}
 /* Option « rôle caché » : ni civil, ni infiltré — on ne sait pas encore. */
 .badge.b-secret{color:var(--dim);border-color:var(--line2);background:#161a22}
+
+/* Inviter depuis l'écran de fin : discret, mais présent là où on regarde. */
+.invite{width:100%;max-width:420px;border:1px dashed var(--line2);border-radius:3px;
+  padding:12px;margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.invite .tt{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--dim2);
+  text-transform:uppercase}
+.invite .tt b{color:var(--brass);letter-spacing:.22em;font-size:15px}
+.invite .btn{max-width:260px;margin:0}
+.invite .mini{margin:0;text-align:center}

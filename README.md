@@ -285,7 +285,14 @@ calcule la même palette, rien ne transite sur le réseau.
 
 ## Rejoindre en cours de partie
 
-Un retardataire n'est pas refusé : il entre comme **spectateur**. Il voit les
+**Entre deux parties, rejoindre est immédiat** : celui qui arrive pendant le
+salon ou sur l'écran de fin est joueur à part entière au tirage suivant, sans
+passer par la case spectateur. L'écran de fin affiche donc le numéro de dossier
+et un bouton « Copier le lien d'invitation », comme le salon — sans quoi on
+terminait une partie sans aucun moyen visible de faire venir quelqu'un.
+
+En **pleine partie**, c'est différent. Un retardataire n'est pas refusé : il
+entre comme **spectateur**. Il voit les
 indices et les votes se dérouler, et il peut parler dans le chat — contrairement
 aux éliminés, il ne connaît aucun secret.
 

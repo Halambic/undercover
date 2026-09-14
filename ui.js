@@ -317,6 +317,22 @@ function paveExclus(add) {
   add(box);
 }
 
+/* Le salon affiche le numéro de dossier en grand ; l'écran de fin, lui, ne
+   montrait que le résultat. On pouvait donc finir une partie sans aucun moyen
+   visible de faire venir quelqu'un pour la suivante — alors que rejoindre à ce
+   moment-là marche très bien, et sans passer par la case spectateur. */
+function paveInvitation(add) {
+  const box = el('div', 'invite');
+  const t = el('div', 'tt');
+  t.append(document.createTextNode('Dossier '), el('b', null, V.code));
+  box.append(t);
+  const cp = el('button', 'btn ghost sm', 'Copier le lien d\'invitation');
+  cp.onclick = () => $('#btnCopy').click();      // une seule logique de copie
+  box.append(cp);
+  box.append(el('p', 'mini', 'Qui arrive maintenant joue la prochaine partie, sans attendre.'));
+  add(box);
+}
+
 /* ---------- zone centrale ---------- */
 function renderStage() {
   const st = $('#stage'); st.innerHTML = ''; st.className = 'stage';
@@ -556,6 +572,7 @@ function renderStage() {
     const l1 = el('div', 'sc'); l1.append(el('span', null, 'Mot des civils'), el('b', null, V.pair.civil));
     const l2 = el('div', 'sc'); l2.append(el('span', null, 'Mot des Undercover'), el('b', null, V.pair.under));
     t.append(l1, l2); add(t);
+    paveInvitation(add);
     paveExclus(add);
     if (V.isHost) {
       const b = el('button', 'btn mt', 'Nouvelle partie');
