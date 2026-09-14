@@ -294,6 +294,25 @@ function render() {
   renderStage();
 }
 
+/* Exclure quelqu'un ne doit pas être définitif : l'hôte garde la liste sous les
+   yeux et peut rouvrir la porte d'un clic. Affiché partout où l'on peut exclure
+   — salon ET écran de fin — sans quoi on peut sortir un joueur sans pouvoir le
+   rappeler. */
+function paveExclus(add) {
+  if (!V.isHost || !V.bannis || !V.bannis.length) return;
+  const box = el('div', 'exclus');
+  box.append(el('div', 'tt', V.bannis.length > 1 ? 'Joueurs exclus' : 'Joueur exclu'));
+  V.bannis.forEach(x => {
+    const l = el('div', 'exc');
+    const r = el('button', 'btn ghost sm', 'Réadmettre');
+    r.onclick = () => send({ t: 'readmettre', token: x.token });
+    l.append(el('span', null, x.name), r);
+    box.append(l);
+  });
+  box.append(el('p', 'mini', 'Il devra rouvrir le lien d\'invitation pour revenir.'));
+  add(box);
+}
+
 /* ---------- zone centrale ---------- */
 function renderStage() {
   const st = $('#stage'); st.innerHTML = ''; st.className = 'stage';
@@ -349,21 +368,7 @@ function renderStage() {
     add(g);
     if (!manque) add(el('p', 'mini', `Vous pouvez lancer, ou attendre jusqu'à ${MAX_JOUEURS} joueurs.`));
 
-    /* Exclure quelqu'un ne doit pas être définitif : l'hôte garde la liste
-       sous les yeux et peut rouvrir la porte d'un clic. */
-    if (V.isHost && V.bannis && V.bannis.length) {
-      const box = el('div', 'exclus');
-      box.append(el('div', 'tt', V.bannis.length > 1 ? 'Joueurs exclus' : 'Joueur exclu'));
-      V.bannis.forEach(x => {
-        const l = el('div', 'exc');
-        const r = el('button', 'btn ghost sm', 'Réadmettre');
-        r.onclick = () => send({ t: 'readmettre', token: x.token });
-        l.append(el('span', null, x.name), r);
-        box.append(l);
-      });
-      box.append(el('p', 'mini', 'Il devra rouvrir le lien d\'invitation pour revenir.'));
-      add(box);
-    }
+    paveExclus(add);
 
     if (V.isHost) {
       const b = el('button', 'btn mt2', 'Lancer la partie');
@@ -547,6 +552,7 @@ function renderStage() {
     const l1 = el('div', 'sc'); l1.append(el('span', null, 'Mot des civils'), el('b', null, V.pair.civil));
     const l2 = el('div', 'sc'); l2.append(el('span', null, 'Mot des Undercover'), el('b', null, V.pair.under));
     t.append(l1, l2); add(t);
+    paveExclus(add);
     if (V.isHost) {
       const b = el('button', 'btn mt', 'Nouvelle partie');
       b.disabled = !!V.cfgError; b.onclick = () => send({ t: 'again' });

@@ -304,6 +304,13 @@ function verifierMinuteur() {
 
 function startRound(fresh) {
   if (fresh) {
+    /* Un joueur exclu en pleine manche reste dans la liste jusqu'au bout : son
+       nom figure dans les indices déjà donnés. Mais il ne doit pas réapparaître
+       au tirage suivant — banni, il ne peut plus se connecter, et il hériterait
+       d'un rôle en comptant dans les conditions de victoire. */
+    const bannis = new Set((S.bannis || []).map(b => b.token));
+    if (bannis.size) S.players = S.players.filter(p => p.id === HOST_ID || !bannis.has(p.token));
+
     const err = cfgError(); if (err) return toast(err);   // le tirage reste ici : il persiste l'historique
     const pair = pickPair();
     if (!pair) return toast('Aucun mot disponible.');

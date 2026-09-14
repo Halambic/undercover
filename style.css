@@ -56,7 +56,11 @@ body.playing #game{display:grid}
    le panneau des catégories (voir ui.js), qui étouffait à droite sous les
    réglages. Elle garde aussi le son, l'état du réseau et la reprise de main,
    qui disparaissaient purement et simplement du salon. */
-body[data-phase="lobby"] #playersPanel,body[data-phase="end"] #playersPanel{display:none}
+/* Masqué dans le SALON seulement : la scène y liste déjà les joueurs, avec leur
+   bouton d'exclusion. Sur l'écran de fin, elle affiche le vainqueur et les mots —
+   sans ce panneau, l'hôte n'avait plus aucun moyen d'exclure quelqu'un entre deux
+   parties, au moment précis où il en a besoin. */
+body[data-phase="lobby"] #playersPanel{display:none}
 /* En salon, la gauche accueille les catégories : autant lui donner la même
    largeur que la colonne des réglages. */
 body[data-phase="lobby"] #game,body[data-phase="end"] #game{grid-template-columns:340px minmax(0,1fr) 340px}
@@ -398,6 +402,10 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
      colonne qui défile — sans quoi le dernier panneau se retrouvait écrasé. */
   .col.left,.col.right{position:sticky;top:16px;max-height:calc(100vh - 32px);
     overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+  /* Hauteur DÉFINIE quand la colonne accueille les catégories : avec un simple
+     plafond, `#catPanel{flex:1}` n'a rien où grandir et la liste retombe sur son
+     plancher alors que des centaines de pixels restent libres en dessous. */
+  body[data-phase="lobby"] .col.left,body[data-phase="end"] .col.left{height:calc(100vh - 32px)}
   .col.left::-webkit-scrollbar,.col.right::-webkit-scrollbar{width:6px}
   .col.left::-webkit-scrollbar-thumb,.col.right::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 }

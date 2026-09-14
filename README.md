@@ -288,10 +288,20 @@ partie ».
 
 ## Exclure un joueur, et le reprendre
 
+On peut exclure **à tout moment** : dans le salon, en pleine manche, et sur
+l'écran de fin — c'est là qu'on en a le plus besoin, juste avant de relancer.
+
+Le geste n'a pas le même effet partout. Hors partie, le joueur est simplement
+retiré. **En pleine manche**, il est éliminé et son rôle révélé, mais il reste
+dans la liste : son nom figure dans les indices déjà donnés et son rôle comptait
+dans l'équilibre. Il disparaît au tirage suivant — sans quoi, banni et incapable
+de se reconnecter, il héritait d'un rôle et comptait dans les conditions de
+victoire. Un fantôme qui pouvait se retrouver Undercover et bloquer la partie.
+
 Exclure bannit le jeton du joueur — sans ça, sa reconnexion automatique le
 ramènerait dans la seconde. Mais une exclusion n'est pas un jugement définitif :
-l'hôte garde sous les yeux, dans le salon, la liste des exclus avec un bouton
-**Réadmettre**. Le joueur n'a plus qu'à rouvrir le lien d'invitation. Le message
+l'hôte garde sous les yeux la liste des exclus avec un bouton **Réadmettre**,
+affichée partout où l'on peut exclure. Le joueur n'a plus qu'à rouvrir le lien d'invitation. Le message
 qu'il reçoit conserve le code du salon dans l'adresse, pour qu'il n'ait pas à le
 redemander.
 
