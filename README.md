@@ -143,7 +143,8 @@ purement local à chaque navigateur : il ne touche pas aux réglages et ne trans
 pas sur le réseau.
 
 Quand une recherche est active, **« Tout / Aucune / Inverser » ne portent que sur
-ce qui est affiché**, et leur libellé le dit (« Aucune (5) »). Sinon, chercher
+ce qui est affiché**, et une ligne sous les boutons le dit en toutes lettres.
+Sinon, chercher
 « sport » puis cliquer « Aucune » viderait toute la banque au lieu d'écarter les
 cinq catégories qu'on visait. L'hôte vérifie chaque nom reçu contre la banque :
 la liste vient du client, on ne s'y fie pas. La décision vit dans
@@ -493,3 +494,10 @@ sur le réseau.
 Les civils doivent rester majoritaires, **3 joueurs minimum, 20 maximum**.
 Le salon affiche ce compte en clair, et ne montre des emplacements vides que
 tant que le minimum n'est pas atteint.
+
+### Couleurs : une leçon
+
+`--ink` est la couleur de **fond** (`#0a0b0f`), pas celle du texte — c'est
+`--txt`. Écrire `color:var(--ink)` donne du noir sur noir, sans aucune erreur :
+CSS n'a pas de quoi s'en plaindre. En cas de doute, la vérification qui tranche
+est le rapport de contraste calculé sur le rendu réel, pas l'œil.

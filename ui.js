@@ -268,12 +268,13 @@ function render() {
        alors qu'on voulait juste écarter trois catégories. Le libellé le dit. */
     const filtre = !!R.norm(filtreCat);
     $('#catClear').hidden = !filtre;
-    $$('#catBar button').forEach(b => {
-      const nom = { all: 'Tout', none: 'Aucune', invert: 'Inverser' }[b.dataset.c];
-      b.textContent = filtre ? nom + ' (' + vues.length + ')' : nom;
-      b.title = filtre ? nom.toLowerCase() + ' parmi les ' + vues.length + ' catégories affichées'
-                       : nom.toLowerCase() + ' parmi les ' + CATS.length + ' catégories';
-    });
+    /* Le suffixe « (5) » sur chaque bouton les faisait passer à la ligne : la
+       portée s'écrit une seule fois, en dessous. */
+    const p = $('#catScope');
+    p.hidden = !filtre;
+    p.textContent = filtre
+      ? 'Ces trois boutons ne portent que sur les ' + vues.length + ' catégories affichées.'
+      : '';
   }
 
   /* --- scores --- */

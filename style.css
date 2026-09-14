@@ -57,6 +57,9 @@ body.playing #game{display:grid}
    réglages. Elle garde aussi le son, l'état du réseau et la reprise de main,
    qui disparaissaient purement et simplement du salon. */
 body[data-phase="lobby"] #playersPanel,body[data-phase="end"] #playersPanel{display:none}
+/* En salon, la gauche accueille les catégories : autant lui donner la même
+   largeur que la colonne des réglages. */
+body[data-phase="lobby"] #game,body[data-phase="end"] #game{grid-template-columns:340px minmax(0,1fr) 340px}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
 .col.center{justify-content:flex-start}
 /* La scène et le chat se partagent la hauteur de la colonne centrale. La base
@@ -422,10 +425,12 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 /* Recherche de catégorie — 184 pastilles, l'œil ne suffit plus. */
 .catsearch{position:relative;margin-bottom:8px}
 .catsearch input{width:100%;background:#0c0e13;border:1px solid var(--line);border-radius:3px;
-  color:var(--ink);font-family:inherit;font-size:13px;padding:7px 28px 7px 10px}
+  color:var(--txt);font-family:inherit;font-size:13px;padding:7px 28px 7px 10px}
+.catsearch input::placeholder{color:var(--dim2)}
 .catsearch input:focus{outline:none;border-color:var(--brass)}
 .catsearch input::-webkit-search-cancel-button{display:none}
 .catsearch button{position:absolute;right:4px;top:50%;transform:translateY(-50%);
   background:none;border:0;color:var(--dim2);cursor:pointer;font-size:12px;padding:4px 6px;line-height:1}
-.catsearch button:hover{color:var(--ink)}
+.catsearch button:hover{color:var(--txt)}
 .cats .vide{color:var(--dim2);font-size:13px;padding:6px 2px}
+.catscope{margin:0 0 8px;line-height:1.35;color:var(--dim2)}
