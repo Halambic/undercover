@@ -392,18 +392,33 @@ window.UC_RULES = (() => {
      le rôle ou le mot d'un autre avant révélation. Fonction pure, donc
      vérifiable par tests.js sans ouvrir de salon.
      ---------------------------------------------------------------------- */
+  /**
+   * Option « rôle caché » : on reçoit son mot sans savoir de quel camp il est.
+   * Civil ou Undercover, impossible de le dire — il faut l'déduire des indices
+   * des autres, ce qui retire à l'infiltré son avantage de comédien.
+   *
+   * Mr White fait exception, et ce n'est pas un oubli : il ne reçoit aucun mot,
+   * donc il sait forcément ce qu'il est. Lui mentir n'ajouterait rien.
+   * Une fois éliminé — ou la partie finie — chacun apprend ce qu'il était.
+   */
+  const ROLE_SECRET = 'secret';
+  const roleCache = (e, p) =>
+    (e.cfg.hideRole && p.role && p.role !== 'white') ? ROLE_SECRET : p.role;
+
   function projeter(e, id, extra = {}, chatDepuis = 0) {
     const moi = e.players.find(p => p.id === id);
     const toutVoir = e.phase === 'end';
+    /* Son propre rôle, éventuellement masqué par l'option. */
+    const monRole = p => (toutVoir || p.revealed) ? p.role : roleCache(e, p);
     const nomDe = pid => (e.players.find(p => p.id === pid) || {}).name || '?';
     return {
       me: id, phase: e.phase, round: e.round, cfg: e.cfg,
-      you: moi ? { role: moi.role, word: moi.word, alive: moi.alive,
+      you: moi ? { role: monRole(moi), word: moi.word, alive: moi.alive,
                    voted: moi.voted, pending: !!moi.pending } : null,
       pair: toutVoir ? e.pair : (e.cfg.showCat && e.pair ? { cat: e.pair.cat } : null),
       players: e.players.map(p => ({
         id: p.id, name: p.name, connected: p.connected, alive: p.alive, score: p.score,
-        role: (toutVoir || p.revealed || p.id === id) ? p.role : null,
+        role: (toutVoir || p.revealed) ? p.role : (p.id === id ? monRole(p) : null),
         pending: !!p.pending,
         hasVoted: e.phase === 'vote' ? !!p.voted : false,
       })),
@@ -438,7 +453,7 @@ window.UC_RULES = (() => {
   /** La devinette de Mr White est-elle bonne ? */
   const guessOk = (essai, motCivil) => !!norm(essai) && norm(essai) === norm(motCivil);
 
-  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, stepCfg, shuffle, norm, cfgError, cfgAdvice,
+  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, cfgError, cfgAdvice,
            appliquerCats,
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,

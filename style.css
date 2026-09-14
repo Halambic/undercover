@@ -442,3 +442,5 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 .catsearch button:hover{color:var(--txt)}
 .cats .vide{color:var(--dim2);font-size:13px;padding:6px 2px}
 .catscope{margin:0 0 8px;line-height:1.35;color:var(--dim2)}
+/* Option « rôle caché » : ni civil, ni infiltré — on ne sait pas encore. */
+.badge.b-secret{color:var(--dim);border-color:var(--line2);background:#161a22}

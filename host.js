@@ -6,9 +6,11 @@
    ============================================================================ */
 const HOST_ID = 'host';
 const ROLE = {
-  civil: { label: 'Civil',      cls: 'b-civil', em: '🙂' },
-  under: { label: 'Undercover', cls: 'b-under', em: '🕵️' },
-  white: { label: 'Mr White',   cls: 'b-white', em: '🎩' },
+  civil:  { label: 'Civil',       cls: 'b-civil',  em: '🙂' },
+  under:  { label: 'Undercover',  cls: 'b-under',  em: '🕵️' },
+  white:  { label: 'Mr White',    cls: 'b-white',  em: '🎩' },
+  /* Option « rôle caché » : ce qu'on affiche à quelqu'un qui ignore son camp. */
+  secret: { label: 'Camp inconnu', cls: 'b-secret', em: '❓' },
 };
 let S = null;     // état hôte
 let V = null;     // vue locale (hôte comme client)
@@ -17,7 +19,8 @@ function hostInit(name) {
   S = {
     code: NET.code, phase: 'lobby', round: 0,
     cfg: Object.assign({ under: 1, white: 0, hard: false, whiteGuess: true, showCat: false,
-                        civilFirst: false, off: [], tClue: 0, tDebate: 0, tVote: 0 }, lsGet('uc_cfg', {})),
+                        civilFirst: false, hideRole: false, off: [],
+                        tClue: 0, tDebate: 0, tVote: 0 }, lsGet('uc_cfg', {})),
     players: [], order: [], turn: 0, clues: [], chat: [], chatSeq: 0, bannis: [],
     pair: null, elim: null, result: null, tie: null, usedWords: lsGet('uc_used2', []),
   };
@@ -142,7 +145,7 @@ function onHostMessage(conn, msg) {
       if (!isHost || !canConfigure()) return;
       /* msg.v est une DIRECTION (+1 / −1) pour toutes les molettes. */
       if (R.PALIERS[msg.k]) S.cfg[msg.k] = R.stepCfg(S.cfg, msg.k, msg.v);
-      if (['hard', 'whiteGuess', 'showCat', 'civilFirst'].includes(msg.k)) S.cfg[msg.k] = !!msg.v;
+      if (['hard', 'whiteGuess', 'showCat', 'civilFirst', 'hideRole'].includes(msg.k)) S.cfg[msg.k] = !!msg.v;
       if (msg.k === 'cat') {                       // (dé)sélection d'une catégorie
         const name = String(msg.v && msg.v.name || '');
         if (!CATS.some(c => c.name === name)) return;

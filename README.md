@@ -160,6 +160,20 @@ bouton du son, l'état du réseau et « quitter le salon », qui disparaissaient
 purement et simplement du salon. Sur écran étroit, tout s'empile et le panneau
 reste à sa place d'origine.
 
+## Option « rôle caché »
+
+Réglage du salon. Activée, elle ne donne à chacun que **son mot**, jamais son
+camp : impossible de savoir si l'on est civil ou Undercover, il faut le déduire
+des indices des autres. L'infiltré perd son avantage de comédien — il ne sait
+pas qu'il doit mentir — et un civil un peu original doute de lui-même.
+
+**Mr White fait exception, et ce n'est pas un oubli** : il ne reçoit aucun mot,
+donc il sait forcément ce qu'il est. Lui mentir n'ajouterait rien.
+
+Une élimination révèle le vrai rôle comme d'habitude, y compris à l'éliminé, et
+la fin de partie dévoile tout. Le masquage se fait dans `projeter` : le serveur
+n'envoie jamais le rôle, il ne se contente pas de le cacher à l'affichage.
+
 ## Ce qu'une élimination révèle
 
 **Un rôle, jamais un mot.** Le mot de l'éliminé voyageait encore dans la vue de

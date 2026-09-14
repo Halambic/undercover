@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=13"></script>
+<script src="rules.js?v=14"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -534,6 +534,57 @@ groupe('Sélection groupée des catégories');
   verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
   verifie('une action inconnue ne change rien',
           R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
+}
+
+groupe('Option « rôle caché »');
+{
+  const monte = cache => {
+    const e = partie(['civil', 'under', 'white', 'civil', 'civil']);
+    e.cfg.hideRole = cache;
+    e.pair = { civil: 'Marmotte', under: 'Musaraigne', cat: 'Animaux' };
+    R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+    return e;
+  };
+  const vu = (e, r) => R.projeter(e, e.players.find(p => p.role === r).id).you.role;
+
+  /* option éteinte : rien ne change */
+  const off = monte(false);
+  verifie('option éteinte : le civil connaît son camp', vu(off, 'civil') === 'civil');
+  verifie('option éteinte : l\'undercover aussi', vu(off, 'under') === 'under');
+
+  const e = monte(true);
+  verifie('rôle caché : le civil ignore son camp', vu(e, 'civil') === R.ROLE_SECRET, vu(e, 'civil'));
+  verifie('rôle caché : l\'undercover aussi', vu(e, 'under') === R.ROLE_SECRET, vu(e, 'under'));
+  verifie('mais Mr White sait : il n\'a pas de mot', vu(e, 'white') === 'white', vu(e, 'white'));
+
+  /* le mot, lui, arrive toujours : c'est tout ce qu'on a pour jouer */
+  const civ = e.players.find(p => p.role === 'civil');
+  const und = e.players.find(p => p.role === 'under');
+  verifie('le civil reçoit son mot', R.projeter(e, civ.id).you.word === 'Marmotte');
+  verifie('l\'undercover reçoit le sien', R.projeter(e, und.id).you.word === 'Musaraigne');
+
+  /* et le masquage ne doit rien révéler des autres, dans aucun sens */
+  verifie('personne ne voit le camp d\'un autre',
+          e.players.every(moi => R.projeter(e, moi.id).players
+            .every(p => p.id === moi.id || p.role === null)));
+  verifie('le mot adverse ne fuit pas davantage',
+          !JSON.stringify(R.projeter(e, civ.id)).includes('Musaraigne'));
+  verifie('« secret » n\'apparaît jamais chez les autres',
+          e.players.every(moi => R.projeter(e, moi.id).players
+            .filter(p => p.id !== moi.id).every(p => p.role !== R.ROLE_SECRET)));
+
+  /* une élimination révèle le vrai rôle, option ou pas */
+  e.phase = 'vote'; e.players.forEach(p => p.voted = und.id);
+  R.depouiller(e);
+  verifie('l\'éliminé est révélé pour de bon', R.projeter(e, civ.id).elim.role === 'under');
+  verifie('et il apprend ce qu\'il était', R.projeter(e, und.id).you.role === 'under');
+  verifie('les vivants ignorent toujours le leur', vu(e, 'civil') === R.ROLE_SECRET);
+
+  /* fin de partie : tout le monde sait tout */
+  R.terminer(e, 'civils');
+  verifie('fin de partie : chacun connaît son camp', vu(e, 'civil') === 'civil');
+  verifie('et ceux de tous les autres',
+          R.projeter(e, civ.id).players.every(p => p.role !== null && p.role !== R.ROLE_SECRET));
 }
 
 groupe('Anti-triche : les mots ne fuient à aucune phase');

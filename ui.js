@@ -30,7 +30,7 @@ function playerRow(p, o = {}) {
   const nm = el('span', 'nm', p.name + (p.id === V.me ? ' (toi)' : ''));
   row.append(av, nm);
   if (p.pending) row.append(el('span', 'badge b-wait', 'prochaine partie'));
-  else if (p.role) row.append(el('span', 'badge ' + ROLE[p.role].cls, ROLE[p.role].label));
+  else if (p.role && ROLE[p.role]) row.append(el('span', 'badge ' + ROLE[p.role].cls, ROLE[p.role].label));
   if (o.votes) row.append(el('span', 'votes', o.votes + '✕'));
   if (o.check) row.append(el('span', 'check', '✓'));
   if (!p.connected) row.append(el('span', 'dot off'));
@@ -154,11 +154,15 @@ function render() {
   rp.hidden = V.phase === 'lobby' || !V.you || !V.you.role;
   if (!rp.hidden) {
     const white = V.you.role === 'white';
+    const secret = V.you.role === R.ROLE_SECRET;
     $('#roleTag').textContent = white ? 'Aucun mot' : 'Ton mot';
     $('#roleWord').textContent = white ? '🎩 Mr White' : V.you.word;
+    /* Sous le mot : la catégorie si l'option est active, sinon — en rôle caché —
+       le rappel qu'on ignore son propre camp. Les deux ne se cumulent pas. */
+    const indice = V.cfg.showCat && V.pair?.cat ? 'Catégorie : ' + V.pair.cat : '';
     $('#roleCat').textContent = white
       ? 'Écoute les autres et improvise.'
-      : (V.cfg.showCat && V.pair?.cat ? 'Catégorie : ' + V.pair.cat : '');
+      : (indice || (secret ? 'Civil ou Undercover ? À toi de le deviner.' : ''));
     $('#roleCard').classList.toggle('blur', blurWord);
     $('#btnBlur').textContent = blurWord ? 'Révéler' : 'Caviarder';
   }
