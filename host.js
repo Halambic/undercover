@@ -280,9 +280,12 @@ const canConfigure = () => S.phase === 'lobby' || S.phase === 'end';
 /* L'appli officielle "suggere automatiquement le bon nombre de chaque role
    selon le nombre de joueurs" sans publier sa table : environ 1 imposteur
    pour 4 joueurs donne des parties equilibrees. */
-const cfgAdvice = () => R.cfgAdvice(S.players.length, S.cfg);
+/* L'équilibre se juge sur ceux qui vont réellement jouer, pas sur la liste :
+   un absent ne recevra pas de rôle. */
+const presents = () => S.players.filter(p => p.connected).length;
+const cfgAdvice = () => R.cfgAdvice(presents(), S.cfg);
 
-const cfgError = () => R.cfgError(S.players.length, S.cfg, countPairs(S.cfg));
+const cfgError = () => R.cfgError(presents(), S.cfg, countPairs(S.cfg));
 
 /* ---------- tirage des mots, sans répétition ---------- */
 function pickPair() {
@@ -317,7 +320,10 @@ function startRound(fresh) {
     const err = cfgError(); if (err) return toast(err);   // le tirage reste ici : il persiste l'historique
     const pair = pickPair();
     if (!pair) return toast('Aucun mot disponible.');
-    R.demarrerManche(S, { pair, roles: R.assignRoles(S.players.length, S.cfg) });
+    /* Seuls les présents reçoivent un rôle ; les autres regardent cette partie
+       et entrent à la suivante, comme un retardataire. */
+    const auTirage = S.players.filter(p => p.connected).map(p => p.id);
+    R.demarrerManche(S, { pair, roles: R.assignRoles(auTirage.length, S.cfg), joueurs: auTirage });
   } else R.demarrerManche(S);
   armerMinuteur();
   hostNudge();
@@ -363,6 +369,7 @@ function viewFor(id) {
     creux: S.creuxDepuis ? Math.max(0, DELAI_ABANDON - (Date.now() - S.creuxDepuis)) : null,
     /* Seul l'hôte voit qui il a exclu — c'est lui qui peut les rappeler. */
     bannis: id === HOST_ID ? (S.bannis || []) : null,
+    absents: canConfigure() ? S.players.filter(p => !p.connected).map(p => p.name) : [],
   }, dest ? (dest.chatVu || 0) : 0);
   return vue;
 }

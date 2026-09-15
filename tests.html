@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=15"></script>
+<script src="rules.js?v=16"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -534,6 +534,53 @@ groupe('Sélection groupée des catégories');
   verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
   verifie('une action inconnue ne change rien',
           R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
+}
+
+groupe('Le tirage ignore les absents');
+{
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  R.parId(e, 'p1').connected = false;                     // onglet fermé au moment du lancement
+  const presents = e.players.filter(p => p.connected).map(p => p.id);
+  R.demarrerManche(e, { pair: e.pair, roles: R.assignRoles(presents.length, { under: 1, white: 0 }),
+                        joueurs: presents });
+  const absent = R.parId(e, 'p1');
+
+  verifie('l\'absent n\'a pas de rôle', absent.role === null, absent.role);
+  verifie('ni de mot', absent.word === null, absent.word);
+  verifie('il est spectateur', absent.pending === true && absent.alive === false);
+  verifie('et hors du tour de parole', !e.order.includes('p1'), e.order);
+  verifie('les présents jouent tous', e.order.length === 3, e.order.length);
+  verifie('chaque présent a un rôle',
+          e.players.filter(p => p.connected).every(p => p.role), e.players.map(p => p.name + ':' + p.role));
+
+  /* le point qui rendait la partie ininterrompable : il ne doit peser sur rien */
+  verifie('il ne compte pas dans les vivants', R.vivants(e).length === 3, R.vivants(e).length);
+  verifie('ni dans les votants', R.votants(e).length === 3);
+  const imposteurs = e.players.filter(p => p.role && p.role !== 'civil');
+  imposteurs.forEach(p => { p.alive = false; });
+  verifie('les civils peuvent gagner malgré lui', R.outcome(R.vivants(e)) === 'civils', R.outcome(R.vivants(e)));
+
+  /* il entre à la partie d'après, s'il est revenu */
+  const f = partie(['civil', 'civil', 'under', 'civil']);
+  R.parId(f, 'p1').connected = false;
+  const p1 = f.players.filter(p => p.connected).map(p => p.id);
+  R.demarrerManche(f, { pair: f.pair, roles: R.assignRoles(3, { under: 1, white: 0 }), joueurs: p1 });
+  R.parId(f, 'p1').connected = true;                      // il revient
+  const p2 = f.players.filter(p => p.connected).map(p => p.id);
+  R.demarrerManche(f, { pair: f.pair, roles: R.assignRoles(4, { under: 1, white: 0 }), joueurs: p2 });
+  verifie('de retour, il joue la partie suivante',
+          !R.parId(f, 'p1').pending && R.parId(f, 'p1').role && f.order.includes('p1'), f.order);
+
+  /* sans liste de joueurs, rien ne change : tout le monde joue */
+  const g = partie(['civil', 'civil', 'under', 'civil']);
+  R.demarrerManche(g, { pair: g.pair, roles: g.players.map(p => p.role) });
+  verifie('sans liste, tout le monde joue', g.order.length === 4 && g.players.every(p => p.role));
+
+  /* l'équilibre se juge sur les présents, pas sur la liste */
+  verifie('4 inscrits dont 1 absent = 3 joueurs : 1 imposteur passe',
+          R.cfgError(3, { under: 1, white: 0 }, 99) === null);
+  verifie('mais 2 imposteurs sur 3 présents sont refusés',
+          R.cfgError(3, { under: 1, white: 1 }, 99) !== null);
 }
 
 groupe('Troncature : ne jamais couper un emoji en deux');

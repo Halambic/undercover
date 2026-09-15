@@ -318,6 +318,13 @@ calcule la même palette, rien ne transite sur le réseau.
 
 ## Rejoindre en cours de partie
 
+**Un joueur hors ligne au moment du tirage ne reçoit pas de rôle.** Il devient
+spectateur de cette partie et entre à la suivante, comme un retardataire. Sans
+cette règle, un absent héritait d'un rôle — Undercover compris — comptait dans
+les conditions de victoire et ne parlait jamais : la partie devenait
+ininterrompable. L'équilibre civils/imposteurs se juge donc sur les **présents**,
+pas sur la liste, et l'écran de fin prévient avant de relancer.
+
 **Entre deux parties, rejoindre est immédiat** : celui qui arrive pendant le
 salon ou sur l'écran de fin est joueur à part entière au tirage suivant, sans
 passer par la case spectateur. L'écran de fin affiche donc le numéro de dossier

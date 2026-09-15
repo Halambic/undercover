@@ -36,7 +36,7 @@
      dessin quel que soit son système. Google la découpe par plages Unicode : le
      navigateur ne télécharge que les tranches réellement affichées. -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -216,16 +216,21 @@
 <!-- Chargement dans l'ordre des dépendances : chaque fichier n'utilise les
      précédents qu'à l'intérieur de ses fonctions, jamais au chargement.
      Après toute modification d'un de ces fichiers, incrémenter son ?v= —
-     sinon les navigateurs resservent l'ancienne version depuis leur cache. -->
+     sinon les navigateurs resservent l'ancienne version depuis leur cache.
+
+     Attention au piège : ce ?v= protège les scripts, PAS cette page. Si le
+     navigateur ressert index.html depuis son cache, il redemandera les anciens
+     ?v= et le correctif semblera sans effet. Pour tester, recharger avec
+     Ctrl+Shift+R, ou ajouter n'importe quoi à l'adresse (?x=1). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=15"></script>
+<script src="rules.js?v=16"></script>
 <script src="utils.js?v=5"></script>
 <script src="sfx.js?v=4"></script>
 <script src="art.js?v=2"></script>
 <script src="net.js?v=3"></script>
-<script src="host.js?v=16"></script>
-<script src="ui.js?v=18"></script>
+<script src="host.js?v=17"></script>
+<script src="ui.js?v=19"></script>
 <script src="app.js?v=1"></script>
 </body>
 </html>

@@ -323,6 +323,15 @@ function paveExclus(add) {
    montrait que le résultat. On pouvait donc finir une partie sans aucun moyen
    visible de faire venir quelqu'un pour la suivante — alors que rejoindre à ce
    moment-là marche très bien, et sans passer par la case spectateur. */
+/* Prévenir avant de relancer : un joueur hors ligne ne recevra pas de rôle. */
+function paveAbsents(add) {
+  const a = V.absents || [];
+  if (!a.length) return;
+  add(el('p', 'mini warn-doux',
+    (a.length > 1 ? a.join(', ') + ' sont hors ligne : ils regarderont' : a[0] + ' est hors ligne : il regardera')
+    + ' cette partie et entrera à la suivante.'));
+}
+
 function paveInvitation(add) {
   const box = el('div', 'invite');
   const t = el('div', 'tt');
@@ -392,6 +401,7 @@ function renderStage() {
 
     paveExclus(add);
 
+    paveAbsents(add);
     if (V.isHost) {
       const b = el('button', 'btn mt2', 'Lancer la partie');
       b.disabled = !!V.cfgError;
@@ -574,6 +584,7 @@ function renderStage() {
     const l1 = el('div', 'sc'); l1.append(el('span', null, 'Mot des civils'), el('b', null, V.pair.civil));
     const l2 = el('div', 'sc'); l2.append(el('span', null, 'Mot des Undercover'), el('b', null, V.pair.under));
     t.append(l1, l2); add(t);
+    paveAbsents(add);
     paveInvitation(add);
     paveExclus(add);
     if (V.isHost) {

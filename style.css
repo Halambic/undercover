@@ -473,3 +473,4 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 .emopick button{background:none;border:0;border-radius:3px;cursor:pointer;
   font-size:19px;line-height:1;padding:4px 0;font-family:var(--emoji)}
 .emopick button:hover,.emopick button:focus-visible{background:var(--panel3);outline:none}
+.warn-doux{color:var(--brass);max-width:420px;margin-top:10px}

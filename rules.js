@@ -246,14 +246,29 @@ window.UC_RULES = (() => {
     e.deadline = sec ? maintenant + sec * 1000 : null;
   }
 
-  /** Ouvre une manche. `pair` et `roles` sont fournis : le tirage reste dehors. */
-  function demarrerManche(e, { pair, roles } = {}) {
+  /**
+   * Ouvre une manche. `pair` et `roles` sont fournis : le tirage reste dehors.
+   * `joueurs` liste qui participe — les autres deviennent spectateurs. Sans
+   * cette liste, tout le monde joue.
+   *
+   * Un absent ne doit PAS recevoir de rôle : il ne parlerait jamais tout en
+   * comptant dans les conditions de victoire, et pouvait hériter d'Undercover,
+   * ce qui rendait la partie impossible à terminer.
+   */
+  function demarrerManche(e, { pair, roles, joueurs } = {}) {
     if (pair) {                                   // nouvelle partie
       e.pair = pair;
-      e.players.forEach((p, i) => {
-        p.role = roles[i];
+      const participe = joueurs ? id => joueurs.includes(id) : () => true;
+      let k = 0;
+      e.players.forEach(p => {
+        p.revealed = false; p.voted = null; p.clue = null;
+        if (!participe(p.id)) {                   // absent : spectateur de cette partie
+          p.role = null; p.word = null; p.alive = false; p.pending = true;
+          return;
+        }
+        p.role = roles[k++];
         p.word = p.role === 'white' ? null : (p.role === 'under' ? pair.under : pair.civil);
-        p.alive = true; p.pending = false; p.revealed = false; p.voted = null; p.clue = null;
+        p.alive = true; p.pending = false;
       });
       e.round = 0; e.clues = []; e.result = null; e.elim = null; e.log = [];
     }
