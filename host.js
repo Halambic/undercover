@@ -205,7 +205,7 @@ function onHostMessage(conn, msg) {
       startRound(true); break;
 
     case 'chat': {
-      const txt = (msg.text || '').toString().replace(/\s+/g, ' ').trim().slice(0, 200);
+      const txt = R.tronquer(msg.text, 200);
       if (!txt) return;
       if (!R.peutParler(S, p.id)) return;
       if (Date.now() - (p.dernierMsg || 0) < 700) return;    // garde-fou anti-spam

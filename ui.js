@@ -203,6 +203,8 @@ function render() {
   $('#chatNote').textContent = muet ? 'éliminé : lecture seule' : '';
   $('#chatInput').disabled = muet;
   $('#chatInput').placeholder = muet ? 'Tu ne peux plus parler' : 'Écrire…';
+  $('#btnEmoji').disabled = muet;
+  if (muet) ouvrirEmoji(false);
   const cl2 = $('#chatList');
   cl2.innerHTML = '';
   if (!V.chat.length) cl2.append(el('div', 'mini', 'Aucun message.'));
@@ -643,6 +645,70 @@ function majDefilementChat() {
 }
 $('#chatList').addEventListener('scroll', majDefilementChat);
 $('#catList').addEventListener('scroll', e => majFondus(e.currentTarget));
+
+/* ---------- sélecteur d'emoji ----------
+   Pas de drapeaux : leur tranche de police pèse 709 Ko à elle seule, et on ne
+   les utilise jamais en soirée. Ils restent tapables au clavier, et la tranche
+   ne se télécharge alors que chez celui qui en met un. */
+const EMOJIS = [
+  ['Visages', '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😋 😛 😜 🤪 🤗 🤭 🤫 🤔 🤨 😐 😑 😏 😒 🙄 😬 😴 🤤 😷 🤒 🤢 🤮 🥵 🥶 😵 🤯 🤠 🥳 😎 🤓 🧐 😕 😟 🙁 😮 😯 😲 😳 🥺 😨 😰 😥 😢 😭 😱 😖 😣 😞 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 💩 🤡 👻 👽 🤖'],
+  ['Gestes',  '👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 🙏 💪 👀 👂 👃 🧠 🫡 🤷 🤦 🙌 👏'],
+  ['Cœurs',   '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💯 💢 💥 💫 💦 💨 💬 💭'],
+  ['Enquête', '🕵️ 🎩 🔍 🔎 🗝️ 🔑 🚨 ⏳ ⌛ ⏰ 🎲 🃏 🎯 🏆 🥇 🥈 🥉 👑 🎉 🎊 ✨ ⭐ 🌟 💡 🔥 ❄️ ⚡ ☠️ 📌 📢'],
+  ['Divers',  '🍕 🍔 🍟 🌭 🍿 🍺 🍻 🥂 ☕ 🍰 🎂 🍫 🐶 🐱 🦊 🐻 🐼 🦁 🐸 🦄 🐔 🐧 🌍 🌙 ☀️ 🌈 🎮 🎧 🎤 ⚽ 🏀 🚗 ✈️ 🚀 💻 📱'],
+];
+
+let paletteFaite = false;
+function construirePalette() {
+  if (paletteFaite) return;
+  paletteFaite = true;
+  const p = $('#emojiPanel');
+  EMOJIS.forEach(([famille, liste]) => {
+    p.append(el('div', 'fam', famille));
+    const g = el('div', 'grille');
+    liste.split(' ').forEach(e => {
+      const b = el('button', null, e);
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Insérer ' + e);
+      b.onclick = () => insererEmoji(e);
+      g.append(b);
+    });
+    p.append(g);
+  });
+}
+
+/* Insertion à l'endroit du curseur, pas bêtement à la fin : on veut pouvoir
+   glisser un emoji au milieu d'une phrase déjà tapée. */
+function insererEmoji(e) {
+  const i = $('#chatInput');
+  if (i.disabled) return;
+  const d = i.selectionStart ?? i.value.length;
+  const f = i.selectionEnd ?? d;
+  const suite = i.value.slice(0, d) + e + i.value.slice(f);
+  if (suite.length > 200) return toast('Message trop long');
+  i.value = suite;
+  const pos = d + e.length;
+  i.focus();
+  try { i.setSelectionRange(pos, pos); } catch {}
+}
+
+function ouvrirEmoji(on) {
+  const p = $('#emojiPanel'), b = $('#btnEmoji');
+  if (on) construirePalette();
+  p.hidden = !on;
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-expanded', on ? 'true' : 'false');
+}
+
+$('#btnEmoji').onclick = e => { e.stopPropagation(); ouvrirEmoji($('#emojiPanel').hidden); };
+/* Un clic ailleurs referme — sauf dans la palette elle-même, sinon on ne pourrait
+   en poser qu'un seul. */
+document.addEventListener('click', e => {
+  if (!$('#emojiPanel').hidden && !e.target.closest('#emojiPanel,#btnEmoji')) ouvrirEmoji(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#emojiPanel').hidden) { ouvrirEmoji(false); $('#chatInput').focus(); }
+});
 
 const envoyerMsg = () => {
   const i = $('#chatInput'), t = i.value.trim();

@@ -32,7 +32,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=17">
+<!-- Emoji façon Android (Noto Color Emoji), pour que tout le monde voie le même
+     dessin quel que soit son système. Google la découpe par plages Unicode : le
+     navigateur ne télécharge que les tranches réellement affichées. -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -132,8 +136,11 @@
       <div class="hd"><span class="tt">Transmissions</span><span class="mini" id="chatNote"></span></div>
       <div class="scroll" id="chatList" role="log" aria-live="polite" aria-label="Messages"></div>
       <div class="chatbar">
+        <button class="btn sm emo" id="btnEmoji" aria-label="Insérer un emoji"
+                aria-expanded="false" aria-controls="emojiPanel">🙂</button>
         <input class="inp" id="chatInput" maxlength="200" placeholder="Écrire…" autocomplete="off">
         <button class="btn sm" id="chatSend" aria-label="Envoyer le message">→</button>
+        <div class="emopick" id="emojiPanel" role="dialog" aria-label="Emoji" hidden></div>
       </div>
     </div>
 
@@ -212,13 +219,13 @@
      sinon les navigateurs resservent l'ancienne version depuis leur cache. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=14"></script>
-<script src="utils.js?v=4"></script>
+<script src="rules.js?v=15"></script>
+<script src="utils.js?v=5"></script>
 <script src="sfx.js?v=4"></script>
 <script src="art.js?v=2"></script>
 <script src="net.js?v=3"></script>
-<script src="host.js?v=15"></script>
-<script src="ui.js?v=17"></script>
+<script src="host.js?v=16"></script>
+<script src="ui.js?v=18"></script>
 <script src="app.js?v=1"></script>
 </body>
 </html>

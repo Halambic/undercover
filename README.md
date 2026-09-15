@@ -186,6 +186,39 @@ trou qui a laissé passer la fuite. Il parcourt maintenant **toutes** les phases
 indices, discussion, vote, révélation, devinette — et vérifie pour chaque joueur
 qu'aucun mot qu'il n'a pas à connaître n'apparaît nulle part dans sa vue.
 
+## Emoji
+
+Le chat acceptait déjà les emoji tapés au clavier — familles, drapeaux, teintes
+de peau comprises. Deux choses manquaient.
+
+**Un sélecteur.** Un bouton à gauche du champ ouvre une palette de 200 emoji en
+cinq familles. L'insertion se fait à l'endroit du curseur, pas à la fin, et la
+palette reste ouverte pour en poser plusieurs. Échap ou un clic ailleurs la
+referme ; un joueur réduit au silence ne peut pas l'ouvrir. Les drapeaux en sont
+absents volontairement : leur tranche de police pèse 692 Ko à elle seule et ne
+sert jamais. Ils restent tapables au clavier.
+
+**Le même dessin pour tout le monde.** La page charge *Noto Color Emoji*, la
+police d'Android : sans elle, chacun voit les emoji de son système et un 😀
+Windows ne ressemble pas à un 😀 Mac. Elle est citée dans chaque pile de polices
+et ne contient que des emoji — le texte normal tombe sur la police d'à côté.
+
+*Ce que ça coûte :* Google découpe la police en dix tranches par plage Unicode et
+le navigateur ne prend que celles qu'il affiche. Ici **1,3 Mo au premier
+chargement**, ensuite en cache. Ce ne sont pas les emoji du chat qui pèsent : les
+184 icônes de catégories du salon déclenchent déjà les mêmes tranches. Avec
+`font-display: swap`, rien ne bloque l'affichage — les emoji système s'affichent
+d'abord, puis basculent. Pour revenir aux emoji du système, il suffit de retirer
+`var(--emoji)` des trois piles dans `:root`.
+
+### Troncature
+
+Les messages sont coupés à 200 signes, les pseudos à 24. `slice()` compte des
+unités UTF-16 : un emoji en occupe deux, une famille bien davantage, et couper au
+milieu laissait une demi-paire affichée « � ». `R.tronquer` compte désormais des
+**signes affichés** via `Intl.Segmenter` — un 👨‍👩‍👧‍👦 vaut un — avec repli sur les
+points de code.
+
 ## Le chat après la partie
 
 Un éliminé lit sans écrire : il connaît son rôle et celui de sa victime, il

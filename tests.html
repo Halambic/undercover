@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=14"></script>
+<script src="rules.js?v=15"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -534,6 +534,36 @@ groupe('Sélection groupée des catégories');
   verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
   verifie('une action inconnue ne change rien',
           R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
+}
+
+groupe('Troncature : ne jamais couper un emoji en deux');
+{
+  verifie('texte court : inchangé', R.tronquer('salut', 200) === 'salut');
+  verifie('espaces normalisés', R.tronquer('  a   b  ', 200) === 'a b');
+  verifie('vide toléré', R.tronquer(null, 200) === '' && R.tronquer(undefined, 24) === '');
+
+  /* le cas signalé : la coupe tombait au milieu d'une paire de substitution */
+  const coupe = R.tronquer('a'.repeat(199) + '😀🎩', 200);
+  const dernier = coupe.charCodeAt(coupe.length - 1);
+  verifie('aucune demi-paire en fin de texte',
+          !(dernier >= 0xD800 && dernier <= 0xDBFF), coupe.slice(-3));
+  verifie('l\'emoji entier est gardé ou écarté, jamais scindé',
+          coupe.endsWith('😀') || coupe.endsWith('a'), coupe.slice(-3));
+
+  /* on compte des signes AFFICHÉS, pas des unités UTF-16 */
+  verifie('dix emoji tiennent dans dix signes',
+          R.tronquer('😀'.repeat(20), 10) === '😀'.repeat(10));
+  const famille = '👨‍👩‍👧‍👦';
+  verifie('une famille compte pour un',
+          R.tronquer(famille + 'xx', 1) === famille, R.tronquer(famille + 'xx', 1));
+  verifie('et n\'est pas démembrée',
+          !R.tronquer(famille.repeat(3), 2).includes('\u200d' + 'x') &&
+          R.tronquer(famille.repeat(3), 2) === famille.repeat(2));
+  verifie('un drapeau aussi', R.tronquer('🇫🇷🇧🇪', 1) === '🇫🇷', R.tronquer('🇫🇷🇧🇪', 1));
+  verifie('une teinte de peau reste collée', R.tronquer('👍🏽abc', 1) === '👍🏽');
+
+  /* les pseudos passent par la même règle */
+  verifie('pseudo tronqué proprement', R.tronquer('😀'.repeat(30), 24) === '😀'.repeat(24));
 }
 
 groupe('Option « rôle caché »');

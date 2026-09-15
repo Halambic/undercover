@@ -18,6 +18,25 @@ window.UC_RULES = (() => {
     return a;
   };
 
+  /**
+   * Tronque un texte sans couper un emoji en deux.
+   *
+   * `slice(0, n)` compte des unités UTF-16 : un emoji en occupe deux, une famille
+   * ou un drapeau bien davantage. Couper au milieu laissait une demi-paire, que
+   * le navigateur affiche « � ». On compte donc des signes AFFICHÉS — un « 👨‍👩‍👧 »
+   * vaut un — via Intl.Segmenter, avec repli sur les points de code.
+   */
+  const SEGMENTS = (() => {
+    try { return new Intl.Segmenter('fr', { granularity: 'grapheme' }); } catch { return null; }
+  })();
+  const signes = s => SEGMENTS ? [...SEGMENTS.segment(s)].map(g => g.segment) : Array.from(s);
+
+  function tronquer(texte, max) {
+    const s = (texte || '').toString().replace(/\s+/g, ' ').trim();
+    const g = signes(s);
+    return g.length <= max ? s : g.slice(0, max).join('');
+  }
+
   /* comparaison souple pour la devinette de Mr White : accents, casse, espaces */
   const norm = s => (s || '').toString().toLowerCase().normalize('NFD')
                      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
@@ -453,7 +472,7 @@ window.UC_RULES = (() => {
   /** La devinette de Mr White est-elle bonne ? */
   const guessOk = (essai, motCivil) => !!norm(essai) && norm(essai) === norm(motCivil);
 
-  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, cfgError, cfgAdvice,
+  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, tronquer, cfgError, cfgAdvice,
            appliquerCats,
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,

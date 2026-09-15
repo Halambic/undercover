@@ -34,7 +34,7 @@ const countPairs = cfg => R.poolFor(WORDS, cfg).length;
 
 /* ---------- petits outils ---------- */
 /* Pseudos et indices : une seule espace, sans bords, 24 caractères au plus. */
-const clean = s => (s || '').toString().replace(/\s+/g, ' ').trim().slice(0, 24);
+const clean = s => R.tronquer(s, 24);
 const rid   = () => Math.random().toString(36).slice(2, 10);
 const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };

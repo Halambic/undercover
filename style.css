@@ -10,9 +10,13 @@
   --brass:#d7a13f; --brass-d:#a87a25; --stamp:#d8483c; --paper:#e9e4d5;
   --civil:#48b183; --under:#e08a3c; --white:#dfe3ec;
   --r:5px;
-  --dossier:'Oswald',"Haettenschweiler","Arial Narrow",sans-serif;
-  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
-  --body:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  /* Placée dans chaque pile : elle ne contient QUE des emoji, le texte normal
+     tombe donc sur la police d'à côté. Citée explicitement, elle passe devant
+     celle du système — c'est ce qui donne le même dessin à tout le monde. */
+  --emoji:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif;
+  --dossier:'Oswald',"Haettenschweiler","Arial Narrow",var(--emoji),sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,var(--emoji),monospace;
+  --body:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,var(--emoji),sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
@@ -453,3 +457,19 @@ body[data-phase="lobby"] #chatPanel,body[data-phase="end"] #chatPanel{order:4}
 .invite .tt b{color:var(--brass);letter-spacing:.22em;font-size:15px}
 .invite .btn{max-width:260px;margin:0}
 .invite .mini{margin:0;text-align:center}
+
+/* ---------- sélecteur d'emoji ---------- */
+.chatbar{position:relative}
+.chatbar .btn.emo{flex:none;width:38px;padding:0;font-size:17px;line-height:1}
+.chatbar .btn.emo.on{border-color:var(--brass);color:var(--brass)}
+.emopick{position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:30;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r);
+  padding:8px;max-height:212px;overflow-y:auto;
+  box-shadow:0 18px 40px -18px #000;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.emopick .fam{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--dim2);
+  text-transform:uppercase;margin:6px 2px 4px}
+.emopick .fam:first-child{margin-top:0}
+.emopick .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:2px}
+.emopick button{background:none;border:0;border-radius:3px;cursor:pointer;
+  font-size:19px;line-height:1;padding:4px 0;font-family:var(--emoji)}
+.emopick button:hover,.emopick button:focus-visible{background:var(--panel3);outline:none}
