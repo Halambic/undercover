@@ -41,6 +41,43 @@ window.UC_RULES = (() => {
   const norm = s => (s || '').toString().toLowerCase().normalize('NFD')
                      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
+  /**
+   * L'indice trahit-il le mot de celui qui le donne ?
+   *
+   * Le piège est le faux positif : refuser un indice légitime est pire que ne
+   * rien refuser. On compare donc MOT À MOT, par préfixe, jamais par sous-chaîne
+   * — « copain » ne doit pas être bloqué parce que le mot est « pain ».
+   *
+   *   « Chat »   → « chaton » refusé   (le mot de l'indice commence par le sien)
+   *   « Chaton » → « chat » refusé     (l'inverse : la racine suffit)
+   *   « Pain »   → « copain » accepté  (ni l'un ni l'autre n'est préfixe)
+   *   « Or »     → « ordinateur » accepté (moins de 4 lettres : exact seulement)
+   *
+   * Un mot composé est découpé : avec « Pelote basque », dire « pelote » trahit.
+   * Mr White n'a pas de mot, rien à vérifier.
+   */
+  const COURT = 4;
+  /* Articles et prépositions : dans un mot composé ils n'appartiennent à
+     personne. Sans ce filtre, « Le Chat » faisait refuser « le petit animal »
+     à cause du seul « le ». */
+  const VIDES = new Set(['le', 'la', 'les', 'un', 'une', 'de', 'du', 'des', 'au', 'aux',
+                         'a', 'et', 'en', 'l', 'd', 'sur', 'pour', 'dans']);
+
+  function indiceTrahit(indice, mot) {
+    if (!mot) return false;
+    const decouper = s => (s || '').toString().split(/[\s'’\-]+/).map(norm).filter(Boolean);
+    let secrets = decouper(mot);
+    const dits = decouper(indice);
+    if (secrets.length > 1) {
+      const utiles = secrets.filter(m => !VIDES.has(m));
+      if (utiles.length) secrets = utiles;      // un mot seul reste vérifié tel quel
+    }
+    if (!secrets.length || !dits.length) return false;
+    return secrets.some(m => m.length < COURT
+      ? dits.includes(m)
+      : dits.some(d => d.startsWith(m) || (d.length >= COURT && m.startsWith(d))));
+  }
+
   /* ---- configuration ------------------------------------------------- */
 
   /** Message bloquant, ou null si la partie peut démarrer. */
@@ -487,7 +524,7 @@ window.UC_RULES = (() => {
   /** La devinette de Mr White est-elle bonne ? */
   const guessOk = (essai, motCivil) => !!norm(essai) && norm(essai) === norm(motCivil);
 
-  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, tronquer, cfgError, cfgAdvice,
+  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, tronquer, indiceTrahit, cfgError, cfgAdvice,
            appliquerCats,
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,

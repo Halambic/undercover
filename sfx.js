@@ -66,6 +66,9 @@ const SFX = {
 
   /* message reçu : discret, il peut y en avoir beaucoup */
   msg() { this.tone({ f: 880, type: 'sine', dur: .05, vol: .12 }); },
+  /* refus d'un indice : deux notes qui descendent, sèches, sans dramatiser */
+  refus() { this.tone({ f: 330, type: 'triangle', dur: .07, vol: .28 });
+            this.tone({ f: 247, type: 'triangle', t: .07, dur: .10, vol: .26 }); },
 
   blip(f, dur) { this.tone({ f, f2: f * 1.05, type: 'sine', dur: dur || .07, vol: .35 }); },
 

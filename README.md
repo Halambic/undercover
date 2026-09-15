@@ -229,6 +229,35 @@ commentaires d'après-partie, son message à moitié tapé coincé dans un champ
 désactivé. La règle vit dans `R.peutParler` et voyage dans la vue : l'interface
 ne la redécide pas dans son coin.
 
+## Garde-fou sur les indices
+
+Un indice qui contient son propre mot est refusé. C'est la bourde la plus
+fréquente, et elle grille la manche d'un coup.
+
+Le vrai travail a porté sur les **faux positifs** : refuser un indice légitime
+serait pire que ne rien refuser. La comparaison se fait donc mot à mot et par
+préfixe, jamais par sous-chaîne.
+
+| Mot | Indice | |
+|---|---|---|
+| Chat | chaton | refusé — le mot de l'indice commence par le sien |
+| Chaton | chat | refusé — la racine suffit |
+| Pain | copain | **accepté** — ni l'un ni l'autre n'est préfixe |
+| Or | ordinateur | **accepté** — moins de 4 lettres : correspondance exacte seulement |
+| Le Chat | le petit animal | **accepté** — l'article ne compte pour personne |
+
+Accents, casse et ponctuation sont ignorés (`R.norm`, la même comparaison que
+pour la devinette de Mr White). Les mots composés sont découpés : avec « Pelote
+basque », dire « pelote » trahit. Mr White n'a pas de mot, rien ne le bloque.
+
+Passé sur toute la banque : **les 3 688 mots sont détectés** quand on les donne
+comme indice, et le taux de faux positifs sur 4 000 croisements aléatoires est de
+**0,05 %** (« Tour » / « tournesol », « Carré » / « carreau »).
+
+Le refus est **privé** : un message discret chez l'intéressé seul, avec sa
+saisie conservée pour qu'il la corrige. Les autres ne voient rien — savoir qu'un
+joueur a failli lâcher son mot serait déjà une information.
+
 ## Les trois minuteurs
 
 | Réglage | Portée |

@@ -437,7 +437,10 @@ function renderStage() {
       add(el('p', 'mini', 'Un mot, ou une très courte phrase — sans jamais prononcer le tien.'));
       const inp = el('input', 'inp'); inp.placeholder = 'Ton indice…'; inp.maxLength = 24;
       const btn = el('button', 'btn', 'Envoyer');
-      const go = () => { const t = inp.value.trim(); if (!t) return; send({ t: 'clue', text: t }); inp.value = ''; };
+      /* On ne vide pas le champ : si l'indice est refusé, le joueur doit
+         retrouver sa saisie pour la corriger. Quand il passe, le tour change et
+         la scène est redessinée de toute façon. */
+      const go = () => { const t = inp.value.trim(); if (t) send({ t: 'clue', text: t }); };
       btn.onclick = go;
       inp.onkeydown = e => { if (e.key === 'Enter') go(); };
       add(inp, btn);

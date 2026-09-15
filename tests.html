@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=16"></script>
+<script src="rules.js?v=18"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -534,6 +534,51 @@ groupe('Sélection groupée des catégories');
   verifie('un nom inconnu est ignoré', triche.join() === 'Sport', triche);
   verifie('une action inconnue ne change rien',
           R.appliquerCats(['Sport'], toutes, 'vide-tout', toutes).join() === 'Sport');
+}
+
+groupe('Garde-fou : un indice ne doit pas contenir son mot');
+{
+  const refuse = (indice, mot) => R.indiceTrahit(indice, mot) === true;
+  const passe  = (indice, mot) => R.indiceTrahit(indice, mot) === false;
+
+  /* ce qu'il faut attraper */
+  verifie('le mot exact', refuse('marmotte', 'Marmotte'));
+  verifie('au milieu d\'une phrase', refuse('un peu comme une marmotte', 'Marmotte'));
+  verifie('la casse ne sauve pas', refuse('MARMOTTE', 'Marmotte'));
+  verifie('les accents non plus', refuse('electricite', 'Électricité'));
+  verifie('la ponctuation non plus', refuse('marmotte !', 'Marmotte'));
+  verifie('le pluriel', refuse('des marmottes', 'Marmotte'));
+  verifie('un dérivé', refuse('chaton', 'Chat'));
+  verifie('la racine d\'un mot long', refuse('chat', 'Chaton'));
+  verifie('un mot composé, par sa première moitié', refuse('pelote', 'Pelote basque'));
+  verifie('ou par la seconde', refuse('basque', 'Pelote basque'));
+
+  /* ce qu'il ne faut SURTOUT pas bloquer */
+  verifie('« copain » avec le mot « pain »', passe('copain', 'Pain'));
+  verifie('« ordinateur » avec le mot « or »', passe('ordinateur', 'Or'));
+  verifie('un mot court seulement s\'il est exact', refuse('de l\'or', 'Or'));
+  verifie('« acheter » avec le mot « chat »', passe('acheter', 'Chat'));
+  verifie('« nourriture » avec le mot « ours »', passe('nourriture', 'Ours'));
+  verifie('un indice sans rapport', passe('montagne hiver', 'Marmotte'));
+  verifie('un article du mot composé ne bloque pas', passe('le petit animal', 'Le Chat'));
+  verifie('mais le mot utile, si', refuse('le petit chat', 'Le Chat'));
+  verifie('« de » ne bloque pas non plus', passe('on en trouve dans la nature', 'Cri de guerre'));
+  verifie('un mot court seul reste vérifié', refuse('or', 'Or'));
+
+  /* Mr White n'a pas de mot : rien à vérifier */
+  verifie('Mr White n\'est jamais bloqué', passe('marmotte', null));
+  verifie('indice vide : rien à dire', passe('', 'Marmotte'));
+
+  /* le refus ne doit pas s'ébruiter : c'est l'hôte qui répond en privé */
+  const e = partie(['civil', 'civil', 'under', 'civil']);
+  e.pair = { civil: 'Marmotte', under: 'Musaraigne', cat: 'Animaux' };
+  R.demarrerManche(e, { pair: e.pair, roles: e.players.map(p => p.role) });
+  const civ = e.players.find(p => p.role === 'civil');
+  verifie('un civil est bloqué sur son mot', R.indiceTrahit('marmotte', civ.word) === true);
+  verifie('mais pas sur celui des autres', R.indiceTrahit('musaraigne', civ.word) === false);
+  const und = e.players.find(p => p.role === 'under');
+  verifie('l\'undercover est bloqué sur le sien', R.indiceTrahit('musaraigne', und.word) === true);
+  verifie('et libre sur celui des civils', R.indiceTrahit('marmotte', und.word) === false);
 }
 
 groupe('Le tirage ignore les absents');

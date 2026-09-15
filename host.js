@@ -172,6 +172,12 @@ function onHostMessage(conn, msg) {
       if (S.order[S.turn] !== p.id) return;
       const txt = clean(msg.text);
       if (!txt) return;
+      /* Refus privé : les autres ne doivent pas apprendre qu'il a failli lâcher
+         son mot — ce serait déjà une information. */
+      if (R.indiceTrahit(txt, p.word)) {
+        sendTo(p.id, { t: 'note', m: 'Ton indice contient ton mot — trouve autre chose.' });
+        return;
+      }
       S.clues.push({ round: S.round, id: p.id, text: txt });
       p.clue = txt;
       R.tourSuivant(S);                  // le suivant repart sur son temps plein
@@ -388,6 +394,7 @@ function onClientMessage(msg) {
     return;
   }
   if (msg.t === 'err')     { ovCode = msg.code || NET.code; overlay('🚫', 'Impossible de rejoindre', msg.m); return; }
+  if (msg.t === 'note')    { toast(msg.m); SFX.refus(); return; }   // message privé, sans bloquer
   if (msg.t === 'state')   {
     CHAT = msg.v.chatPlein ? msg.v.chat : CHAT.concat(msg.v.chat);
     if (CHAT.length > 60) CHAT = CHAT.slice(-60);
