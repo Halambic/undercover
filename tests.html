@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=18"></script>
+<script src="rules.js?v=19"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -835,6 +835,18 @@ groupe('Chat différentiel');
   const a = R.projeter(e, 'p0', {}, 0), b = R.projeter(e, 'p0', {}, 3);
   verifie('le reste de la vue est identique',
           JSON.stringify({ ...a, chat: 0, chatPlein: 0 }) === JSON.stringify({ ...b, chat: 0, chatPlein: 0 }));
+
+  /* compteur monotone : c'est lui qui sert à repérer un message neuf, la
+     longueur de la liste étant plafonnée à 60 et cessant alors de croître */
+  verifie('le compteur suit les messages', R.projeter(e, 'p0').chatN === 3, R.projeter(e, 'p0').chatN);
+  verifie('il est le même pour tous',
+          e.players.every(p => R.projeter(e, p.id).chatN === e.chatSeq));
+  const avantCap = R.projeter(e, 'p0').chatN;
+  for (let i = 0; i < 70; i++) { e.chat.push({ id: 'p1', name: 'J1', text: 'x' + i, ts: 0, n: ++e.chatSeq });
+                                 if (e.chat.length > 60) e.chat.shift(); }
+  const apresCap = R.projeter(e, 'p0');
+  verifie('la liste plafonne à 60', apresCap.chat.length === 60, apresCap.chat.length);
+  verifie('mais le compteur continue de monter', apresCap.chatN > avantCap + 60, apresCap.chatN);
 
   /* un message sans numéro (partie sauvegardée avant ce changement) */
   e.chat.unshift({ id: 'p0', name: 'J0', text: 'ancien', ts: 0 });

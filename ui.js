@@ -86,15 +86,72 @@ function annoncer(v) {
   $('#annonce').textContent = t;
 }
 
+/* ---------- alerte quand l'onglet est en arrière-plan ----------
+   Les sons existent déjà, mais on ne les entend pas toujours — volume coupé,
+   casque enlevé, autre application par-dessus. Et quand on est sur un autre
+   onglet, on ne regarde pas le jeu : on regarde la barre d'onglets. Le titre
+   de la page devient donc le signal. */
+const TITRE = document.title;
+let tourEnAttente = false, msgNonLus = 0, clignotant = null, titreAlterne = false;
+
+/* La partie est-elle bloquée sur MOI ? C'est le seul cas qui mérite qu'on
+   réclame l'attention : les autres attendent. Prend un INSTANTANÉ (celui que
+   `prev` conserve), pas une vue — `elim` y est déjà réduit à un identifiant. */
+const bloqueSurMoi = s => !!s && ((s.phase === 'clue' && s.currentId === s.me)
+                               || (s.phase === 'guess' && s.elim === s.me));
+
+function texteAlerte() {
+  if (tourEnAttente) return '▶ À toi de jouer !';
+  if (msgNonLus) return '(' + msgNonLus + ') message' + (msgNonLus > 1 ? 's' : '');
+  return null;
+}
+
+function majAlerte() {
+  const t = texteAlerte();
+  if (!t) {
+    clearInterval(clignotant); clignotant = null;
+    document.title = TITRE;
+    return;
+  }
+  document.title = t;
+  /* Alternance lente : un titre figé se remarque moins qu'un titre qui bouge,
+     et clignoter plus vite serait pénible. Les navigateurs bridant les minuteurs
+     des onglets cachés à une seconde, inutile de descendre plus bas. */
+  if (!clignotant) {
+    clignotant = setInterval(() => {
+      const a = texteAlerte();
+      if (!a) return majAlerte();
+      titreAlterne = !titreAlterne;
+      document.title = titreAlterne ? TITRE : a;
+    }, 1300);
+  }
+}
+
+function oublierAlerte() {
+  if (!tourEnAttente && !msgNonLus) return;
+  tourEnAttente = false; msgNonLus = 0;
+  majAlerte();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) oublierAlerte(); });
+window.addEventListener('focus', oublierAlerte);
+
 let prev = null;                                  // vue précédente, pour repérer les transitions
 
 function sonsDeTransition(v) {
   const p = prev;
-  prev = { phase: v.phase, clues: v.clues.length, currentId: v.currentId, chat: v.chat.length,
-           joueurs: v.players.length, elim: v.elim && v.elim.id, round: v.round };
+  prev = { phase: v.phase, clues: v.clues.length, currentId: v.currentId, chatN: v.chatN || 0,
+           joueurs: v.players.length, elim: v.elim && v.elim.id, round: v.round, me: v.me };
   if (!p) return;
+  const nouveauxMsg = Math.max(0, (v.chatN || 0) - p.chatN);
+  const deMoi = (v.chat[v.chat.length - 1] || {}).mine;
   if (v.phase === 'lobby' && v.players.length > p.joueurs) SFX.join();
-  if (v.chat.length > p.chat && !(v.chat[v.chat.length - 1] || {}).mine) SFX.msg();
+  if (nouveauxMsg && !deMoi) SFX.msg();
+  /* Alerte d'arrière-plan : on ne la déclenche que si l'onglet n'est pas visible. */
+  if (document.hidden) {
+    if (nouveauxMsg && !deMoi) msgNonLus += nouveauxMsg;
+    if (bloqueSurMoi(prev) && !bloqueSurMoi(p)) tourEnAttente = true;
+    majAlerte();
+  }
   if (p.phase === 'lobby' && v.phase === 'clue')           SFX.start();
   if (v.phase === 'clue' && v.clues.length > p.clues)      SFX.clue();
   if (v.phase === 'clue' && v.currentId === v.me && p.currentId !== v.me) SFX.turn();

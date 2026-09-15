@@ -517,6 +517,9 @@ window.UC_RULES = (() => {
       chat: (e.chat || []).filter(m => m.n == null ? !chatDepuis : m.n > chatDepuis)
                           .map(m => ({ name: m.name, text: m.text, ts: m.ts, mine: m.id === id })),
       chatPlein: !chatDepuis,
+      /* Compteur monotone : la longueur de la liste ne dit rien, elle est
+         plafonnée à 60 et cesse alors de croître. */
+      chatN: e.chatSeq || 0,
       ...extra,
     };
   }

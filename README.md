@@ -229,6 +229,32 @@ commentaires d'après-partie, son message à moitié tapé coincé dans un champ
 désactivé. La règle vit dans `R.peutParler` et voyage dans la vue : l'interface
 ne la redécide pas dans son coin.
 
+## Quand l'onglet est en arrière-plan
+
+Les sons de transition existaient déjà, mais on ne les entend pas toujours —
+volume coupé, casque enlevé, autre application par-dessus. Et sur un autre
+onglet, on ne regarde pas le jeu : on regarde la barre d'onglets. Le **titre de
+la page** devient donc le signal.
+
+| Situation | Titre |
+|---|---|
+| La partie t'attend (ton indice, ta devinette) | `▶ À toi de jouer !` |
+| Messages non lus | `(3) messages` |
+
+Le titre alterne lentement avec le titre normal — un titre figé se remarque
+moins, clignoter plus vite serait pénible. Inutile de descendre sous la seconde :
+les navigateurs brident les minuteurs des onglets cachés.
+
+Rien ne se déclenche quand l'onglet est visible, ni pour ses propres messages.
+Tout est remis à zéro dès le retour sur l'onglet.
+
+### Un défaut trouvé en chemin
+
+Le repérage d'un message neuf comparait la **longueur** de la liste de chat. Or
+elle est plafonnée à 60 : passé ce cap elle cesse de croître, et plus aucun son
+ne se déclenchait. La vue expose désormais `chatN`, un compteur monotone, et
+c'est lui qui sert de repère.
+
 ## Garde-fou sur les indices
 
 Un indice qui contient son propre mot est refusé. C'est la bourde la plus
