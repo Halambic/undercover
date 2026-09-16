@@ -784,22 +784,28 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- sélecteur de GIF ----------
-   Le catalogue vient de Tenor, qui réclame une clé. Sans clé le bouton
+   Le catalogue vient de GIPHY, qui réclame une clé. Sans clé le bouton
    n'apparaît pas : mieux vaut aucun bouton qu'un bouton qui échoue.
+   (Tenor a fermé son API le 30 juin 2026.)
    L'adresse choisie est refiltrée par l'hôte (R.gifValide) — ce qui part d'ici
    n'est jamais cru sur parole. */
 
-const TENOR = (window.UC_TENOR || {});
-const gifActif = () => !!(TENOR.cle || '').trim();
+const GIPHY = (window.UC_GIF || {});
+const gifActif = () => !!(GIPHY.cle || '').trim();
 
-/* La vignette animée « tinygif » pèse une fraction du GIF d'origine, et le chat
-   est une colonne étroite : inutile d'y verser 4 Mo par image. */
-function tenorVers(resultats) {
-  return (resultats || []).map(r => {
-    const m = (r.media_formats || {}).tinygif || (r.media_formats || {}).nanogif;
+/* Une clé gratuite ne donne que 100 requêtes par heure, partagées par TOUS les
+   joueurs du site. On garde donc chaque réponse : rouvrir le panneau ou refaire
+   une recherche déjà faite ne coûte plus rien. */
+const gifCache = new Map();
+
+/* La vignette « fixed_width » fait 200 px de large, quelques dizaines de Ko ;
+   le chat est une colonne étroite, inutile d'y verser le GIF d'origine. */
+function giphyVers(donnees) {
+  return (donnees || []).map(r => {
+    const im = r.images || {};
+    const m = im.fixed_width || im.downsized || im.original;
     if (!m || !m.url) return null;
-    const [w, h] = m.dims || [0, 0];
-    return { url: m.url, w, h, alt: r.content_description || 'GIF' };
+    return { url: m.url, w: +m.width || 0, h: +m.height || 0, alt: r.title || 'GIF' };
   }).filter(Boolean);
 }
 
@@ -807,40 +813,50 @@ let gifJeton = 0;                             // annule les réponses dépassée
 async function chercherGifs(q) {
   const grille = $('#gifGrid'), note = $('#gifNote');
   const moi = ++gifJeton;
+
+  if (gifCache.has(q)) return afficherGifs(gifCache.get(q), q, moi);
+
   note.textContent = 'Recherche…';
-  const base = q ? 'search' : 'featured';
   const p = new URLSearchParams({
-    key: TENOR.cle, client_key: 'undercover', limit: '24',
-    media_filter: 'tinygif', contentfilter: TENOR.filtre || 'medium',
-    locale: 'fr_FR', country: 'FR',
+    api_key: GIPHY.cle, limit: '24', rating: GIPHY.filtre || 'pg-13',
+    lang: 'fr', bundle: 'messaging_non_clips',
   });
   if (q) p.set('q', q);
   try {
-    const rep = await fetch('https://tenor.googleapis.com/v2/' + base + '?' + p);
+    const rep = await fetch('https://api.giphy.com/v1/gifs/' + (q ? 'search' : 'trending') + '?' + p);
+    if (rep.status === 429) throw new Error('quota');
     if (!rep.ok) throw new Error('HTTP ' + rep.status);
     const data = await rep.json();
-    if (moi !== gifJeton) return;             // une frappe plus récente a pris la main
-    const liste = tenorVers(data.results);
-    grille.innerHTML = '';
-    if (!liste.length) { note.textContent = 'Aucun GIF pour « ' + q +' ».'; return; }
-    note.textContent = '';
-    liste.forEach(g => {
-      const b = el('button', 'gifcell');
-      b.type = 'button';
-      b.title = g.alt;
-      b.setAttribute('aria-label', 'Envoyer : ' + g.alt);
-      const i = new Image();
-      i.src = g.url; i.alt = g.alt; i.loading = 'lazy';
-      b.append(i);
-      b.onclick = () => envoyerGif(g);
-      grille.append(b);
-    });
+    const liste = giphyVers(data.data);
+    gifCache.set(q, liste);
+    afficherGifs(liste, q, moi);
   } catch (err) {
     if (moi !== gifJeton) return;
     grille.innerHTML = '';
-    note.textContent = 'Tenor est injoignable.';
-    console.warn('Tenor :', err);
+    note.textContent = err.message === 'quota'
+      ? 'GIPHY est saturé — réessaie dans quelques minutes.'
+      : 'GIPHY est injoignable.';
+    console.warn('GIPHY :', err);
   }
+}
+
+function afficherGifs(liste, q, moi) {
+  if (moi !== gifJeton) return;               // une frappe plus récente a pris la main
+  const grille = $('#gifGrid'), note = $('#gifNote');
+  grille.innerHTML = '';
+  if (!liste.length) { note.textContent = 'Aucun GIF pour « ' + q + ' ».'; return; }
+  note.textContent = 'via GIPHY';             // marque d'attribution exigée par GIPHY
+  liste.forEach(g => {
+    const b = el('button', 'gifcell');
+    b.type = 'button';
+    b.title = g.alt;
+    b.setAttribute('aria-label', 'Envoyer : ' + g.alt);
+    const i = new Image();
+    i.src = g.url; i.alt = g.alt; i.loading = 'lazy';
+    b.append(i);
+    b.onclick = () => envoyerGif(g);
+    grille.append(b);
+  });
 }
 
 function envoyerGif(g) {
@@ -850,16 +866,33 @@ function envoyerGif(g) {
   $('#chatInput').focus();
 }
 
-/* Une image reçue : on réserve sa place avant qu'elle n'arrive, sinon le chat
-   saute d'un cran à chaque chargement et on perd sa ligne de lecture. */
+/* Une image reçue : on réserve sa place AVANT qu'elle n'arrive, sinon le chat
+   saute d'un cran à chaque chargement et on perd sa ligne de lecture.
+   L'attribut width d'une image est écrasé par le CSS (`width:auto`) tant
+   qu'elle n'est pas chargée : il faut une largeur ferme + `aspect-ratio`.
+
+   PAS de `loading="lazy"` ici, contrairement à la grille de recherche. Dans un
+   conteneur qui défile lui-même, la heuristique du navigateur s'est montrée
+   peu fiable : des GIF pourtant dans le champ de vision ne se chargeaient
+   jamais et restaient blancs pour toujours. Le fil plafonne à 60 messages et
+   les vignettes font 200 px — le chargement différé n'y gagnait presque rien
+   et coûtait une panne visible. */
+const GIF_L = 180, GIF_H = 160;               // bornes d'affichage dans le fil
+
 function imageChat(g) {
   const a = el('a', 'gifmsg');
   a.href = g.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
   const i = new Image();
-  i.src = g.url; i.alt = g.alt || 'GIF'; i.loading = 'lazy';
-  if (g.w && g.h) { i.width = g.w; i.height = g.h; }
-  /* Le chat recolle au dernier message ; une image qui grandit après coup
-     décalerait ce calage. On le refait une fois l'image posée. */
+  i.alt = g.alt || 'GIF';
+  if (g.w && g.h) {
+    /* largeur telle que la hauteur reste sous la borne */
+    const l = Math.round(Math.min(GIF_L, g.w, g.w * GIF_H / g.h));
+    i.style.width = l + 'px';
+    i.style.aspectRatio = g.w + ' / ' + g.h;
+  }
+  i.src = g.url;
+  /* Le chat recolle au dernier message ; une image sans dimensions connues
+     grandit après coup et décalerait ce calage. On le refait une fois posée. */
   i.onload = () => { const c = $('#chatList'); if (c.dataset.libre !== '1') c.scrollTop = c.scrollHeight; };
   a.append(i);
   return a;
@@ -879,7 +912,7 @@ if (gifActif()) {
   $('#btnGif').hidden = false;
   $('#btnGif').onclick = e => { e.stopPropagation(); ouvrirGif($('#gifPanel').hidden); };
   /* On attend une pause de frappe : une requête par lettre épuiserait le quota
-     Tenor pour rien. */
+     en une soirée. */
   $('#gifSearch').oninput = () => {
     clearTimeout(gifMinuteur);
     gifMinuteur = setTimeout(() => chercherGifs($('#gifSearch').value.trim()), 350);

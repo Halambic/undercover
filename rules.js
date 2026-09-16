@@ -82,15 +82,21 @@ window.UC_RULES = (() => {
      Laisser un joueur choisir l'adresse d'une image que TOUS les autres vont
      charger, c'est lui laisser choisir à quel serveur ils se présentent : ce
      serveur voit alors l'adresse IP de chacun. On n'accepte donc que le CDN de
-     Tenor, en https, et on jette tout le reste — y compris la partie « ? » de
-     l'adresse, qui ne sert à rien ici et pourrait servir de mouchard. */
+     GIPHY, en https, et on jette tout le reste. */
 
-  const GIF_HOTE = /^media[0-9]*\.tenor\.com$/;
-  const GIF_MAX  = 300;                       // longueur d'adresse raisonnable
+  const GIF_HOTE = /^(media[0-9]*|i)\.giphy\.com$/;
+  const GIF_MAX  = 400;                       // longueur d'adresse raisonnable
 
   /**
    * Nettoie une image proposée par un joueur.
    * Rend un objet sûr { url, w, h, alt }, ou null si l'image est refusée.
+   *
+   * La pièce de sécurité, c'est la LISTE BLANCHE D'HÔTES : c'est l'hôte, et lui
+   * seul, qui détermine à quel serveur les joueurs vont se présenter. La partie
+   * « ? » de l'adresse est conservée — GIPHY signe ses vignettes avec (`cid`,
+   * `ep`…) et les refuse sans. La jeter cassait silencieusement les images sans
+   * rien protéger de plus : une requête sur un hôte giphy.com reste chez GIPHY.
+   * Le fragment « # », lui, ne sert à rien et saute.
    */
   function gifValide(g) {
     if (!g || typeof g !== 'object') return null;
@@ -101,10 +107,12 @@ window.UC_RULES = (() => {
     if (u.protocol !== 'https:') return null;
     if (u.username || u.password) return null;
     if (!GIF_HOTE.test(u.hostname)) return null;
+    /* Le nom de fichier doit finir par .gif — la requête ne compte pas, sinon
+       « /a.png?x=.gif » passerait. */
     if (!/\.gif$/i.test(u.pathname)) return null;
     /* On reconstruit l'adresse au lieu de la recopier : ce qui n'est pas
        explicitement conservé ne peut pas passer. */
-    const url = 'https://' + u.hostname + u.pathname;
+    const url = 'https://' + u.hostname + u.pathname + u.search;
     /* Les dimensions ne servent qu'à réserver la place avant l'arrivée de
        l'image ; une valeur farfelue ne doit pas pouvoir étirer le chat. */
     const dim = v => { const n = Math.round(Number(v)); return (n >= 8 && n <= 2000) ? n : 0; };

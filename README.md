@@ -500,34 +500,53 @@ partie sans pouvoir l'influencer. Anti-spam à 700 ms par joueur (1,5 s pour un 
 limités à 200 caractères, affichage par `textContent` (aucune injection
 possible). Les 60 derniers messages sont conservés.
 
-### GIF (Tenor)
+### GIF (GIPHY)
 
-Un bouton **GIF** à côté de l'emoji ouvre une recherche Tenor. Il n'apparaît
+Un bouton **GIF** à côté de l'emoji ouvre une recherche GIPHY. Il n'apparaît
 que si une clé d'API est renseignée dans `config.js` — sans clé, le chat
 fonctionne exactement comme avant, sans bouton mort ni message d'erreur.
 
-**Pourquoi une clé.** Tenor est l'API de Google ; elle refuse les requêtes
-anonymes. La marche à suivre est écrite en tête de `config.js`. Cette clé est
-*publique* : elle se lit dans le code source du site. C'est le fonctionnement
-normal d'une clé Tenor côté navigateur, mais il faut la **restreindre au
-domaine du site** dans la console Google, sinon n'importe qui peut consommer
-ton quota depuis ailleurs.
+**Pourquoi GIPHY et pas Tenor.** Tenor a fermé son API le 30 juin 2026 (plus
+aucune clé délivrée depuis janvier 2026) ; X, Discord et WhatsApp ont dû
+migrer. GIPHY est ce qui reste de comparable.
+
+**Le quota est la vraie limite.** Une clé gratuite donne **100 requêtes par
+heure, partagées par tous les joueurs du site**. Deux garde-fous :
+la recherche est temporisée à 350 ms (sinon une requête par lettre), et
+**chaque réponse est gardée en cache** — rouvrir le panneau ou refaire une
+recherche déjà faite ne coûte rien. Seule une requête vraiment nouvelle
+consomme le quota. Épuisé, le panneau affiche « GIPHY est saturé » et le reste
+du jeu continue sans broncher.
 
 **Pourquoi un filtre d'adresses.** Laisser un joueur choisir l'adresse d'une
 image que tous les autres vont charger revient à lui laisser choisir à quel
 serveur ils se présentent — ce serveur voit alors l'adresse IP de chacun.
-`R.gifValide()` n'accepte donc que `media*.tenor.com`, en https, chemin en
-`.gif`, et **reconstruit** l'adresse au lieu de la recopier : la partie `?…`
-est jetée. Le filtre tourne **chez l'hôte**, pas dans l'interface : ce que le
-client envoie ne prouve rien, il a pu être trafiqué. Vingt tests couvrent les
-contournements (domaine sosie `media.tenor.com.evil.net`, identifiant glissé
-dans l'hôte `media.tenor.com@evil.net`, `.gif` déguisé en requête,
-`javascript:`, `data:`).
+`R.gifValide()` n'accepte donc que `media*.giphy.com` et `i.giphy.com`, en
+https, chemin en `.gif`, et **reconstruit** l'adresse au lieu de la recopier.
+Le filtre tourne **chez l'hôte**, pas dans l'interface : ce que le client
+envoie ne prouve rien, il a pu être trafiqué. Les tests couvrent les
+contournements (domaine sosie `media.giphy.com.evil.net`, identifiant glissé
+dans l'hôte `media.giphy.com@evil.net`, `.gif` déguisé en requête,
+`javascript:`, `data:`, et l'ancien CDN de Tenor).
 
-Détails : vignettes `tinygif` (quelques dizaines de Ko, pas le GIF d'origine),
-recherche temporisée à 350 ms (une requête par lettre épuiserait le quota),
-anti-spam à 1,5 s, image bornée à 180×160 px dans le fil, dimensions réservées
-avant l'arrivée de l'image pour que le chat ne saute pas.
+La partie `?…` de l'adresse est **conservée** — c'est un revirement volontaire.
+GIPHY signe ses vignettes avec (`cid`, `ep`…) ; la jeter cassait
+silencieusement les images sans rien protéger de plus, puisqu'une requête sur
+un hôte `giphy.com` reste chez GIPHY. La pièce de sécurité, c'est la liste
+blanche d'hôtes. Le fragment `#`, lui, ne sert à rien et saute.
+
+**Deux pièges d'affichage, trouvés à l'essai.** L'attribut `width` d'une image
+est écrasé par le CSS tant qu'elle n'est pas chargée : sans largeur ferme +
+`aspect-ratio`, la place n'était pas réservée et le chat sautait d'un cran à
+chaque arrivée. Pire, l'image faisait alors 0 de haut, ne croisait jamais le
+champ de vision, et `loading="lazy"` ne déclenchait **jamais** le
+téléchargement — le GIF restait blanc pour toujours chez celui qui l'avait
+reçu. Le chargement différé s'est révélé peu fiable dans un conteneur qui
+défile lui-même : il est **retiré du fil** (60 messages, vignettes de 200 px,
+il n'y gagnait rien) et **gardé dans la grille de recherche**, où il marche.
+
+Autres détails : anti-spam à 1,5 s, image bornée à 180×160 px dans le fil,
+marque « via GIPHY » exigée par leurs conditions d'utilisation.
 
 ## Minuteurs
 

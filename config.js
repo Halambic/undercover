@@ -1,31 +1,37 @@
 /* ======================================================================
-   Clé Tenor — à remplir par l'administrateur du site
+   Clé GIPHY — à remplir par l'administrateur du site
    ======================================================================
 
-   Le sélecteur de GIF interroge l'API Tenor (Google), qui exige une clé.
+   Le sélecteur de GIF interroge l'API GIPHY, qui exige une clé.
    Tant que la ligne ci-dessous est vide, le bouton GIF reste simplement
    absent du chat : tout le reste du jeu fonctionne normalement.
 
+   (Tenor, l'autre grand fournisseur, a fermé son API le 30 juin 2026 —
+   plus aucune clé n'y était délivrée depuis janvier 2026.)
+
    Pour obtenir une clé (gratuite) :
-     1. https://console.cloud.google.com/  →  créer un projet
-     2. « APIs & Services » → « Enable APIs » → activer « Tenor API »
-     3. « Credentials » → « Create credentials » → « API key »
-     4. Coller la clé entre les guillemets ci-dessous, puis pousser le fichier.
+     1. https://developers.giphy.com/  →  « Create an App »
+     2. Choisir « API » (pas « SDK »)
+     3. Copier la clé et la coller entre les guillemets ci-dessous.
 
-   ATTENTION : ce fichier est public. N'importe quel visiteur peut lire cette
-   clé et s'en servir sur son propre site, au débit de ton quota. C'est le
-   fonctionnement normal d'une clé Tenor côté navigateur — mais pense à la
-   restreindre dans la console Google :
-     « Application restrictions » → « Websites » → https://halambic.github.io/*
-   Ainsi la clé ne marche que depuis ce site. Ne mets JAMAIS ici une clé qui
-   donne accès à autre chose que Tenor.
+   ATTENTION — DEUX CHOSES À SAVOIR :
 
-   Pour révoquer : supprimer la clé dans la console Google, vider la ligne ici.
+   1. Ce fichier est public. N'importe quel visiteur peut lire cette clé.
+      C'est le fonctionnement normal d'une clé GIPHY côté navigateur, mais
+      ne mets JAMAIS ici une clé qui donne accès à autre chose que GIPHY.
+      Pour révoquer : supprimer la clé sur developers.giphy.com, vider la
+      ligne ici, et pousser.
+
+   2. Une clé gratuite est plafonnée à 100 requêtes par heure, partagées
+      par TOUS les joueurs du site. Une soirée chargée peut l'épuiser ; le
+      panneau affiche alors « GIPHY est saturé » et le reste du jeu continue
+      sans broncher. Le jeu met les recherches en cache pour économiser le
+      quota (voir README, section « GIF »).
 */
 
-window.UC_TENOR = {
+window.UC_GIF = {
   cle: '',
-  /* Niveau de filtrage Tenor : 'high' (tout public), 'medium' (≈PG-13),
-     'low', 'off'. On reste prudent : le lien de la partie circule librement. */
-  filtre: 'medium',
+  /* Niveau de filtrage GIPHY : 'g' (tout public), 'pg', 'pg-13', 'r'.
+     On reste prudent : le lien de la partie circule librement. */
+  filtre: 'pg-13',
 };
