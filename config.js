@@ -29,7 +29,7 @@
 */
 
 window.UC_GIF = {
-  cle: '',
+  cle: 'Ag1HIDBEMstB5QomvfYzM38KQLcefgirgdJm63nwjlwaIQWnTwcDaG91xTf2yTT4',
   /* Niveau de filtrage KLIPY : 'high' (tout public), 'medium', 'low', 'off'.
      On reste prudent : le lien de la partie circule librement. */
   filtre: 'medium',
