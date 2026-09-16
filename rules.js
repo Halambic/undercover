@@ -82,37 +82,40 @@ window.UC_RULES = (() => {
      Laisser un joueur choisir l'adresse d'une image que TOUS les autres vont
      charger, c'est lui laisser choisir à quel serveur ils se présentent : ce
      serveur voit alors l'adresse IP de chacun. On n'accepte donc que le CDN de
-     GIPHY, en https, et on jette tout le reste. */
+     KLIPY, en https, et on refuse tout le reste. */
 
-  const GIF_HOTE = /^(media[0-9]*|i)\.giphy\.com$/;
+  const GIF_HOTE = /^static[0-9]*\.klipy\.com$/;
   const GIF_MAX  = 400;                       // longueur d'adresse raisonnable
 
   /**
-   * Nettoie une image proposée par un joueur.
+   * Vérifie une image proposée par un joueur.
    * Rend un objet sûr { url, w, h, alt }, ou null si l'image est refusée.
    *
    * La pièce de sécurité, c'est la LISTE BLANCHE D'HÔTES : c'est l'hôte, et lui
-   * seul, qui détermine à quel serveur les joueurs vont se présenter. La partie
-   * « ? » de l'adresse est conservée — GIPHY signe ses vignettes avec (`cid`,
-   * `ep`…) et les refuse sans. La jeter cassait silencieusement les images sans
-   * rien protéger de plus : une requête sur un hôte giphy.com reste chez GIPHY.
-   * Le fragment « # », lui, ne sert à rien et saute.
+   * seul, qui détermine à quel serveur les joueurs vont se présenter.
+   *
+   * On VÉRIFIE sans RÉCRIRE : l'adresse acceptée ressort telle quelle. Les
+   * conditions d'intégration de KLIPY l'exigent (« ne pas retirer, altérer ni
+   * reconstruire les paramètres d'URL » — ils y logent l'identification de
+   * contenu et la modération), et c'est de toute façon plus sûr : une adresse
+   * qu'on ne réassemble pas ne peut pas être réassemblée de travers. Une
+   * adresse douteuse est donc REFUSÉE, jamais rafistolée.
    */
   function gifValide(g) {
     if (!g || typeof g !== 'object') return null;
-    const brut = (g.url || '').toString().trim();
-    if (!brut || brut.length > GIF_MAX) return null;
+    const url = (g.url || '').toString().trim();
+    if (!url || url.length > GIF_MAX) return null;
+    if (url.includes('#')) return null;         // un fragment n'a rien à faire ici
     let u;
-    try { u = new URL(brut); } catch { return null; }
+    try { u = new URL(url); } catch { return null; }
     if (u.protocol !== 'https:') return null;
     if (u.username || u.password) return null;
     if (!GIF_HOTE.test(u.hostname)) return null;
-    /* Le nom de fichier doit finir par .gif — la requête ne compte pas, sinon
-       « /a.png?x=.gif » passerait. */
-    if (!/\.gif$/i.test(u.pathname)) return null;
-    /* On reconstruit l'adresse au lieu de la recopier : ce qui n'est pas
-       explicitement conservé ne peut pas passer. */
-    const url = 'https://' + u.hostname + u.pathname + u.search;
+    /* Le nom de fichier doit finir par .gif ou .webp — on regarde le CHEMIN et
+       pas la requête, sinon « /a.png?x=.gif » passerait. Le WebP animé est
+       accepté parce qu'il est ~10× plus léger que le GIF équivalent (285 Ko
+       contre 4 Mo dans l'exemple de KLIPY) pour un rendu identique. */
+    if (!/\.(gif|webp)$/i.test(u.pathname)) return null;
     /* Les dimensions ne servent qu'à réserver la place avant l'arrivée de
        l'image ; une valeur farfelue ne doit pas pouvoir étirer le chat. */
     const dim = v => { const n = Math.round(Number(v)); return (n >= 8 && n <= 2000) ? n : 0; };

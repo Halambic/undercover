@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=22"></script>
+<script src="rules.js?v=24"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -905,45 +905,40 @@ groupe('Étanchéité (aucune fuite de rôle)');
   verifie('fin de partie : tout est dévoilé', fin.every(v => v.role !== null), fin);
 }
 
-groupe('Filtre des GIF : seul le CDN de GIPHY passe');
+groupe('Filtre des GIF : seul le CDN de KLIPY passe');
 {
-  const U = 'https://media.giphy.com/media/3o7TKsQ8UQ1Tb1bJQI/giphy.gif';
+  const U = 'https://static.klipy.com/ii/935d7ab9d8c6/14/af/um0L4dFH.gif';
   const bon = R.gifValide({ url: U, w: 220, h: 160, alt: 'rire' });
-  verifie('une adresse GIPHY est acceptée', bon && bon.url === U, bon);
+  verifie('une adresse KLIPY est acceptée', bon && bon.url === U, bon);
   verifie('les dimensions sont conservées', bon.w === 220 && bon.h === 160, bon);
-  verifie('media0..media9 aussi', !!R.gifValide({ url: 'https://media4.giphy.com/media/x/a.gif' }));
-  verifie('i.giphy.com aussi', !!R.gifValide({ url: 'https://i.giphy.com/media/x/a.gif' }));
+  verifie('static1/static2 aussi', !!R.gifValide({ url: 'https://static2.klipy.com/a/b.gif' }));
 
   /* ce qu'il faut absolument refuser : chacune de ces adresses révélerait
      l'IP de tous les joueurs au serveur visé. */
   const rejete = u => R.gifValide({ url: u }) === null;
   verifie('un autre domaine', rejete('https://pisteur.example/a.gif'));
-  verifie('un domaine qui imite GIPHY', rejete('https://media.giphy.com.evil.net/a.gif'));
-  verifie('un sous-domaine greffé', rejete('https://evil.net/media.giphy.com/a.gif'));
-  verifie('l\'ancien CDN de Tenor, désormais mort', rejete('https://media.tenor.com/abc/a.gif'));
-  verifie('du http en clair', rejete('http://media.giphy.com/a.gif'));
-  verifie('un identifiant glissé dans l\'hôte', rejete('https://media.giphy.com@evil.net/a.gif'));
-  verifie('autre chose qu\'un .gif', rejete('https://media.giphy.com/a.js'));
-  verifie('un .gif déguisé par la requête', rejete('https://media.giphy.com/a.png?x=.gif'));
+  verifie('un domaine qui imite KLIPY', rejete('https://static.klipy.com.evil.net/a.gif'));
+  verifie('un sous-domaine greffé', rejete('https://evil.net/static.klipy.com/a.gif'));
+  verifie('les CDN des fournisseurs abandonnés', rejete('https://media.tenor.com/a/b.gif')
+                                              && rejete('https://media.giphy.com/media/x/giphy.gif'));
+  verifie('du http en clair', rejete('http://static.klipy.com/a.gif'));
+  verifie('un identifiant glissé dans l\'hôte', rejete('https://static.klipy.com@evil.net/a.gif'));
+  verifie('le WebP animé est accepté', !!R.gifValide({ url: 'https://static2.klipy.com/a/b.webp' }));
+  verifie('autre chose qu\'un .gif ou .webp', rejete('https://static.klipy.com/a.js')
+                                            && rejete('https://static.klipy.com/a.mp4'));
+  verifie('un .gif déguisé par la requête', rejete('https://static.klipy.com/a.png?x=.gif'));
   verifie('du javascript:', rejete('javascript:alert(1)'));
   verifie('une donnée en ligne', rejete('data:image/gif;base64,R0lGOD'));
   verifie('le vide', rejete('') && R.gifValide(null) === null && R.gifValide('texte') === null);
-  verifie('une adresse démesurée', rejete('https://media.giphy.com/' + 'a'.repeat(400) + '.gif'));
+  verifie('une adresse démesurée', rejete('https://static.klipy.com/' + 'a'.repeat(400) + '.gif'));
 
-  /* la requête est CONSERVÉE : GIPHY signe ses vignettes avec et les refuse
-     sans. Le fragment, lui, ne sert à rien et saute. */
-  const sig = '?cid=abc&ep=v1_gifs_search&rid=giphy.gif&ct=g';
-  const propre = R.gifValide({ url: U + sig + '#x' });
-  verifie('la signature GIPHY est conservée', propre.url === U + sig, propre);
-  verifie('le fragment est retiré', !propre.url.includes('#'), propre);
-
-  /* la vraie forme moderne : identifiant v1.<blob> + requête signée */
-  const moderne = 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExAAAC/200w.gif?cid=79&ct=g';
-  verifie('la forme moderne passe', R.gifValide({ url: moderne }).url === moderne);
-
-  /* mais un hôte étranger ne passe toujours pas, requête ou pas */
-  verifie('la requête ne rachète pas un hôte étranger',
-          rejete('https://evil.net/a.gif?cid=79&ep=v1_gifs_search'));
+  /* KLIPY exige que l'adresse ressorte TELLE QUELLE : leurs paramètres portent
+     l'identification de contenu et la modération. On vérifie sans récrire, donc
+     une adresse douteuse est refusée et jamais rafistolée. */
+  const sig = U + '?cid=abc&ct=g';
+  verifie('la requête est conservée intacte', R.gifValide({ url: sig }).url === sig);
+  verifie('un fragment fait refuser, pas rafistoler', rejete(U + '#x'));
+  verifie('rien n\'est réécrit', R.gifValide({ url: U + '?a=1&b=2' }).url === U + '?a=1&b=2');
 
   /* des dimensions absurdes ne doivent pas pouvoir étirer le chat */
   const fou = R.gifValide({ url: U, w: 99999, h: -5 });

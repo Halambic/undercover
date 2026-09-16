@@ -500,53 +500,62 @@ partie sans pouvoir l'influencer. Anti-spam à 700 ms par joueur (1,5 s pour un 
 limités à 200 caractères, affichage par `textContent` (aucune injection
 possible). Les 60 derniers messages sont conservés.
 
-### GIF (GIPHY)
+### GIF (KLIPY)
 
-Un bouton **GIF** à côté de l'emoji ouvre une recherche GIPHY. Il n'apparaît
+Un bouton **GIF** à côté de l'emoji ouvre une recherche KLIPY. Il n'apparaît
 que si une clé d'API est renseignée dans `config.js` — sans clé, le chat
 fonctionne exactement comme avant, sans bouton mort ni message d'erreur.
 
-**Pourquoi GIPHY et pas Tenor.** Tenor a fermé son API le 30 juin 2026 (plus
-aucune clé délivrée depuis janvier 2026) ; X, Discord et WhatsApp ont dû
-migrer. GIPHY est ce qui reste de comparable.
-
-**Le quota est la vraie limite.** Une clé gratuite donne **100 requêtes par
-heure, partagées par tous les joueurs du site**. Deux garde-fous :
-la recherche est temporisée à 350 ms (sinon une requête par lettre), et
-**chaque réponse est gardée en cache** — rouvrir le panneau ou refaire une
-recherche déjà faite ne coûte rien. Seule une requête vraiment nouvelle
-consomme le quota. Épuisé, le panneau affiche « GIPHY est saturé » et le reste
-du jeu continue sans broncher.
+**Pourquoi KLIPY.** Tenor a fermé son API le 30 juin 2026 (plus aucune clé
+délivrée depuis janvier 2026). GIPHY plafonne son palier gratuit à 100
+requêtes/heure et fait payer au-delà. KLIPY — fondé par d'anciens de Tenor,
+adopté par WhatsApp — donne un accès **Production illimité et gratuit**, à
+demander depuis le Partner Panel. Attention : tant que la clé reste en mode
+« Testing », elle est bridée à 100 requêtes/heure pour tout le site.
 
 **Pourquoi un filtre d'adresses.** Laisser un joueur choisir l'adresse d'une
 image que tous les autres vont charger revient à lui laisser choisir à quel
 serveur ils se présentent — ce serveur voit alors l'adresse IP de chacun.
-`R.gifValide()` n'accepte donc que `media*.giphy.com` et `i.giphy.com`, en
-https, chemin en `.gif`, et **reconstruit** l'adresse au lieu de la recopier.
-Le filtre tourne **chez l'hôte**, pas dans l'interface : ce que le client
-envoie ne prouve rien, il a pu être trafiqué. Les tests couvrent les
-contournements (domaine sosie `media.giphy.com.evil.net`, identifiant glissé
-dans l'hôte `media.giphy.com@evil.net`, `.gif` déguisé en requête,
-`javascript:`, `data:`, et l'ancien CDN de Tenor).
+`R.gifValide()` n'accepte donc que `static*.klipy.com`, en https, chemin en
+`.gif` ou `.webp`. Le filtre tourne **chez l'hôte**, pas dans l'interface : ce
+que le client envoie ne prouve rien, il a pu être trafiqué. Les tests couvrent
+les contournements (domaine sosie `static.klipy.com.evil.net`, identifiant
+glissé dans l'hôte `static.klipy.com@evil.net`, `.gif` déguisé en requête,
+`javascript:`, `data:`, et les CDN des deux fournisseurs abandonnés).
 
-La partie `?…` de l'adresse est **conservée** — c'est un revirement volontaire.
-GIPHY signe ses vignettes avec (`cid`, `ep`…) ; la jeter cassait
-silencieusement les images sans rien protéger de plus, puisqu'une requête sur
-un hôte `giphy.com` reste chez GIPHY. La pièce de sécurité, c'est la liste
-blanche d'hôtes. Le fragment `#`, lui, ne sert à rien et saute.
+**On vérifie sans récrire.** L'adresse acceptée ressort *telle quelle* : les
+conditions d'intégration de KLIPY interdisent d'altérer ou de reconstruire les
+paramètres d'URL (ils y logent l'identification de contenu et la modération).
+Une adresse douteuse est donc **refusée**, jamais rafistolée — et une adresse
+qu'on ne réassemble pas ne peut pas être réassemblée de travers.
 
-**Deux pièges d'affichage, trouvés à l'essai.** L'attribut `width` d'une image
-est écrasé par le CSS tant qu'elle n'est pas chargée : sans largeur ferme +
-`aspect-ratio`, la place n'était pas réservée et le chat sautait d'un cran à
-chaque arrivée. Pire, l'image faisait alors 0 de haut, ne croisait jamais le
-champ de vision, et `loading="lazy"` ne déclenchait **jamais** le
-téléchargement — le GIF restait blanc pour toujours chez celui qui l'avait
-reçu. Le chargement différé s'est révélé peu fiable dans un conteneur qui
-défile lui-même : il est **retiré du fil** (60 messages, vignettes de 200 px,
-il n'y gagnait rien) et **gardé dans la grille de recherche**, où il marche.
+**WebP plutôt que GIF.** Dans l'exemple de KLIPY, la même image pèse 4 Mo en
+GIF contre 285 Ko en WebP, pour un rendu identique. On demande les deux formats
+et on préfère le WebP.
 
-Autres détails : anti-spam à 1,5 s, image bornée à 180×160 px dans le fil,
-marque « via GIPHY » exigée par leurs conditions d'utilisation.
+**Ce que leurs conditions nous interdisent**, et qu'il ne faut pas réintroduire :
+pas de cache des résultats, pas de proxy (les requêtes doivent partir du
+navigateur de chaque joueur — donc pas question de faire chercher l'hôte pour
+tout le monde), pas de réordonnancement ni de filtrage des résultats côté
+client (utiliser `content_filter` de l'API), et une marque « via KLIPY »
+visible dans le panneau.
+
+**Le piège du chargement différé.** `loading="lazy"` est **banni** de ce
+panneau, pour de bonnes raisons, trouvées à l'essai :
+- Dans le fil, une image sans hauteur réservée ne croise jamais le champ de
+  vision : le téléchargement ne démarre **jamais** et le GIF reste blanc pour
+  toujours chez celui qui l'a reçu.
+- Dans la grille, les vignettes sont construites pendant que le panneau est
+  encore masqué : elles ne sont jamais vues comme « à l'écran » et ne se
+  chargent jamais non plus (mesuré : 0 vignette sur 5, toutes visibles).
+
+La place de l'image est en revanche bien réservée (largeur ferme +
+`aspect-ratio`) : l'attribut `width` d'une image est écrasé par le CSS tant
+qu'elle n'est pas chargée, et sans ça le chat sautait d'un cran à chaque
+arrivée.
+
+Autres détails : recherche temporisée à 350 ms, anti-spam à 1,5 s, image bornée
+à 180×160 px dans le fil.
 
 ## Minuteurs
 

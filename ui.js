@@ -784,28 +784,45 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- sélecteur de GIF ----------
-   Le catalogue vient de GIPHY, qui réclame une clé. Sans clé le bouton
+   Le catalogue vient de KLIPY, qui réclame une clé. Sans clé le bouton
    n'apparaît pas : mieux vaut aucun bouton qu'un bouton qui échoue.
-   (Tenor a fermé son API le 30 juin 2026.)
-   L'adresse choisie est refiltrée par l'hôte (R.gifValide) — ce qui part d'ici
-   n'est jamais cru sur parole. */
+   (Tenor a fermé son API le 30 juin 2026 ; GIPHY plafonne son palier gratuit.)
+   L'adresse choisie est revérifiée par l'hôte (R.gifValide) — ce qui part d'ici
+   n'est jamais cru sur parole.
 
-const GIPHY = (window.UC_GIF || {});
-const gifActif = () => !!(GIPHY.cle || '').trim();
+   Pas de cache de résultats : leurs conditions d'intégration l'interdisent sans
+   accord écrit, et l'accès Production étant illimité, il n'aurait plus d'objet.
+   Les requêtes partent bien du navigateur de chaque joueur, comme exigé. */
 
-/* Une clé gratuite ne donne que 100 requêtes par heure, partagées par TOUS les
-   joueurs du site. On garde donc chaque réponse : rouvrir le panneau ou refaire
-   une recherche déjà faite ne coûte plus rien. */
-const gifCache = new Map();
+const KLIPY = (window.UC_GIF || {});
+const gifActif = () => !!(KLIPY.cle || '').trim();
+const KLIPY_BASE = 'https://api.klipy.com/api/v1/';
 
-/* La vignette « fixed_width » fait 200 px de large, quelques dizaines de Ko ;
-   le chat est une colonne étroite, inutile d'y verser le GIF d'origine. */
-function giphyVers(donnees) {
-  return (donnees || []).map(r => {
-    const im = r.images || {};
-    const m = im.fixed_width || im.downsized || im.original;
-    if (!m || !m.url) return null;
-    return { url: m.url, w: +m.width || 0, h: +m.height || 0, alt: r.title || 'GIF' };
+/* KLIPY livre quatre tailles (xs, sm, md, hd) en plusieurs formats. La grille
+   est faite de petites vignettes, le chat d'une colonne étroite : inutile d'y
+   verser le format hd, qui dépasse allègrement les 4 Mo.
+   On préfère le WebP animé, ~10× plus léger que le GIF pour un rendu
+   identique (285 Ko contre 4 Mo dans leur propre exemple). */
+const tailleGif = (f, ordre) => {
+  for (const t of ordre) {
+    const v = (f || {})[t]; if (!v) continue;
+    const m = (v.webp && v.webp.url) ? v.webp : v.gif;
+    if (m && m.url) return m;
+  }
+  return null;
+};
+
+function klipyVers(liste) {
+  /* On conserve l'ordre et la composition renvoyés par KLIPY : leurs conditions
+     interdisent de réordonner ou de filtrer les résultats. */
+  return (liste || []).map(r => {
+    const petit = tailleGif(r.file, ['xs', 'sm', 'md', 'hd']);
+    const envoi = tailleGif(r.file, ['sm', 'md', 'xs', 'hd']);
+    if (!petit || !envoi) return null;
+    return {
+      apercu: petit.url,
+      gif: { url: envoi.url, w: +envoi.width || 0, h: +envoi.height || 0, alt: r.title || 'GIF' },
+    };
   }).filter(Boolean);
 }
 
@@ -813,48 +830,48 @@ let gifJeton = 0;                             // annule les réponses dépassée
 async function chercherGifs(q) {
   const grille = $('#gifGrid'), note = $('#gifNote');
   const moi = ++gifJeton;
-
-  if (gifCache.has(q)) return afficherGifs(gifCache.get(q), q, moi);
-
   note.textContent = 'Recherche…';
   const p = new URLSearchParams({
-    api_key: GIPHY.cle, limit: '24', rating: GIPHY.filtre || 'pg-13',
-    lang: 'fr', bundle: 'messaging_non_clips',
+    per_page: '24', locale: 'fr', format_filter: 'webp,gif',
+    content_filter: KLIPY.filtre || 'medium',
   });
   if (q) p.set('q', q);
   try {
-    const rep = await fetch('https://api.giphy.com/v1/gifs/' + (q ? 'search' : 'trending') + '?' + p);
+    const rep = await fetch(KLIPY_BASE + encodeURIComponent(KLIPY.cle)
+                            + '/gifs/' + (q ? 'search' : 'trending') + '?' + p);
     if (rep.status === 429) throw new Error('quota');
     if (!rep.ok) throw new Error('HTTP ' + rep.status);
     const data = await rep.json();
-    const liste = giphyVers(data.data);
-    gifCache.set(q, liste);
-    afficherGifs(liste, q, moi);
+    if (moi !== gifJeton) return;             // une frappe plus récente a pris la main
+    afficherGifs(klipyVers(((data || {}).data || {}).data), q);
   } catch (err) {
     if (moi !== gifJeton) return;
     grille.innerHTML = '';
     note.textContent = err.message === 'quota'
-      ? 'GIPHY est saturé — réessaie dans quelques minutes.'
-      : 'GIPHY est injoignable.';
-    console.warn('GIPHY :', err);
+      ? 'Quota KLIPY atteint — réessaie dans quelques minutes.'
+      : 'KLIPY est injoignable.';
+    console.warn('KLIPY :', err);
   }
 }
 
-function afficherGifs(liste, q, moi) {
-  if (moi !== gifJeton) return;               // une frappe plus récente a pris la main
+function afficherGifs(liste, q) {
   const grille = $('#gifGrid'), note = $('#gifNote');
   grille.innerHTML = '';
   if (!liste.length) { note.textContent = 'Aucun GIF pour « ' + q + ' ».'; return; }
-  note.textContent = 'via GIPHY';             // marque d'attribution exigée par GIPHY
+  note.textContent = 'via KLIPY';             // marque d'attribution exigée par KLIPY
   liste.forEach(g => {
     const b = el('button', 'gifcell');
     b.type = 'button';
-    b.title = g.alt;
-    b.setAttribute('aria-label', 'Envoyer : ' + g.alt);
+    b.title = g.gif.alt;
+    b.setAttribute('aria-label', 'Envoyer : ' + g.gif.alt);
+    /* Pas de `loading="lazy"` : construites pendant que le panneau est encore
+       masqué, les vignettes ne sont jamais vues comme « à l'écran » et ne se
+       chargent alors JAMAIS. Le même piège laissait des GIF blancs dans le fil.
+       24 vignettes WebP se chargent très bien d'un coup. */
     const i = new Image();
-    i.src = g.url; i.alt = g.alt; i.loading = 'lazy';
+    i.src = g.apercu; i.alt = g.gif.alt;
     b.append(i);
-    b.onclick = () => envoyerGif(g);
+    b.onclick = () => envoyerGif(g.gif);
     grille.append(b);
   });
 }
