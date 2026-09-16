@@ -36,7 +36,7 @@
      dessin quel que soit son système. Google la découpe par plages Unicode : le
      navigateur ne télécharge que les tranches réellement affichées. -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -138,9 +138,20 @@
       <div class="chatbar">
         <button class="btn sm emo" id="btnEmoji" aria-label="Insérer un emoji"
                 aria-expanded="false" aria-controls="emojiPanel">🙂</button>
+        <button class="btn sm gifbtn" id="btnGif" aria-label="Envoyer un GIF"
+                aria-expanded="false" aria-controls="gifPanel" hidden>GIF</button>
         <input class="inp" id="chatInput" maxlength="200" placeholder="Écrire…" autocomplete="off">
         <button class="btn sm" id="chatSend" aria-label="Envoyer le message">→</button>
         <div class="emopick" id="emojiPanel" role="dialog" aria-label="Emoji" hidden></div>
+        <div class="gifpick" id="gifPanel" role="dialog" aria-label="Choisir un GIF" hidden>
+          <div class="gifbar">
+            <input class="inp" id="gifSearch" maxlength="60" placeholder="Chercher un GIF…"
+                   autocomplete="off" aria-label="Chercher un GIF">
+            <button class="btn sm" id="gifClear" aria-label="Effacer la recherche">✕</button>
+          </div>
+          <div class="gifgrid" id="gifGrid"></div>
+          <div class="mini gifnote" id="gifNote"></div>
+        </div>
       </div>
     </div>
 
@@ -223,14 +234,15 @@
      ?v= et le correctif semblera sans effet. Pour tester, recharger avec
      Ctrl+Shift+R, ou ajouter n'importe quoi à l'adresse (?x=1). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="config.js?v=1"></script>
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=19"></script>
+<script src="rules.js?v=20"></script>
 <script src="utils.js?v=5"></script>
 <script src="sfx.js?v=5"></script>
 <script src="art.js?v=2"></script>
 <script src="net.js?v=3"></script>
-<script src="host.js?v=18"></script>
-<script src="ui.js?v=21"></script>
+<script src="host.js?v=19"></script>
+<script src="ui.js?v=22"></script>
 <script src="app.js?v=1"></script>
 </body>
 </html>

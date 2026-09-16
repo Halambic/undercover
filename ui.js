@@ -261,7 +261,8 @@ function render() {
   $('#chatInput').disabled = muet;
   $('#chatInput').placeholder = muet ? 'Tu ne peux plus parler' : 'Écrire…';
   $('#btnEmoji').disabled = muet;
-  if (muet) ouvrirEmoji(false);
+  $('#btnGif').disabled = muet;
+  if (muet) { ouvrirEmoji(false); ouvrirGif(false); }
   const cl2 = $('#chatList');
   cl2.innerHTML = '';
   if (!V.chat.length) cl2.append(el('div', 'mini', 'Aucun message.'));
@@ -271,7 +272,8 @@ function render() {
     const heure = el('span', 'hr', String(h.getHours()).padStart(2, '0') + ':'
                                 + String(h.getMinutes()).padStart(2, '0'));
     heure.title = h.toLocaleString('fr-FR');
-    d.append(heure, el('span', 'de', m.name), el('span', 'tx', m.text));
+    d.append(heure, el('span', 'de', m.name));
+    if (m.gif && m.gif.url) d.append(imageChat(m.gif)); else d.append(el('span', 'tx', m.text));
     cl2.append(d);
   });
   /* On recolle au dernier message, sauf si le joueur est remonté lire l'historique.
@@ -780,6 +782,117 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('#emojiPanel').hidden) { ouvrirEmoji(false); $('#chatInput').focus(); }
 });
+
+/* ---------- sélecteur de GIF ----------
+   Le catalogue vient de Tenor, qui réclame une clé. Sans clé le bouton
+   n'apparaît pas : mieux vaut aucun bouton qu'un bouton qui échoue.
+   L'adresse choisie est refiltrée par l'hôte (R.gifValide) — ce qui part d'ici
+   n'est jamais cru sur parole. */
+
+const TENOR = (window.UC_TENOR || {});
+const gifActif = () => !!(TENOR.cle || '').trim();
+
+/* La vignette animée « tinygif » pèse une fraction du GIF d'origine, et le chat
+   est une colonne étroite : inutile d'y verser 4 Mo par image. */
+function tenorVers(resultats) {
+  return (resultats || []).map(r => {
+    const m = (r.media_formats || {}).tinygif || (r.media_formats || {}).nanogif;
+    if (!m || !m.url) return null;
+    const [w, h] = m.dims || [0, 0];
+    return { url: m.url, w, h, alt: r.content_description || 'GIF' };
+  }).filter(Boolean);
+}
+
+let gifJeton = 0;                             // annule les réponses dépassées
+async function chercherGifs(q) {
+  const grille = $('#gifGrid'), note = $('#gifNote');
+  const moi = ++gifJeton;
+  note.textContent = 'Recherche…';
+  const base = q ? 'search' : 'featured';
+  const p = new URLSearchParams({
+    key: TENOR.cle, client_key: 'undercover', limit: '24',
+    media_filter: 'tinygif', contentfilter: TENOR.filtre || 'medium',
+    locale: 'fr_FR', country: 'FR',
+  });
+  if (q) p.set('q', q);
+  try {
+    const rep = await fetch('https://tenor.googleapis.com/v2/' + base + '?' + p);
+    if (!rep.ok) throw new Error('HTTP ' + rep.status);
+    const data = await rep.json();
+    if (moi !== gifJeton) return;             // une frappe plus récente a pris la main
+    const liste = tenorVers(data.results);
+    grille.innerHTML = '';
+    if (!liste.length) { note.textContent = 'Aucun GIF pour « ' + q +' ».'; return; }
+    note.textContent = '';
+    liste.forEach(g => {
+      const b = el('button', 'gifcell');
+      b.type = 'button';
+      b.title = g.alt;
+      b.setAttribute('aria-label', 'Envoyer : ' + g.alt);
+      const i = new Image();
+      i.src = g.url; i.alt = g.alt; i.loading = 'lazy';
+      b.append(i);
+      b.onclick = () => envoyerGif(g);
+      grille.append(b);
+    });
+  } catch (err) {
+    if (moi !== gifJeton) return;
+    grille.innerHTML = '';
+    note.textContent = 'Tenor est injoignable.';
+    console.warn('Tenor :', err);
+  }
+}
+
+function envoyerGif(g) {
+  send({ t: 'gif', gif: g });
+  ouvrirGif(false);
+  $('#chatList').dataset.libre = '';
+  $('#chatInput').focus();
+}
+
+/* Une image reçue : on réserve sa place avant qu'elle n'arrive, sinon le chat
+   saute d'un cran à chaque chargement et on perd sa ligne de lecture. */
+function imageChat(g) {
+  const a = el('a', 'gifmsg');
+  a.href = g.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  const i = new Image();
+  i.src = g.url; i.alt = g.alt || 'GIF'; i.loading = 'lazy';
+  if (g.w && g.h) { i.width = g.w; i.height = g.h; }
+  /* Le chat recolle au dernier message ; une image qui grandit après coup
+     décalerait ce calage. On le refait une fois l'image posée. */
+  i.onload = () => { const c = $('#chatList'); if (c.dataset.libre !== '1') c.scrollTop = c.scrollHeight; };
+  a.append(i);
+  return a;
+}
+
+let gifMinuteur = null;
+function ouvrirGif(on) {
+  const p = $('#gifPanel'), b = $('#btnGif');
+  if (on && !gifActif()) return;
+  p.hidden = !on;
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) { ouvrirEmoji(false); $('#gifSearch').focus(); chercherGifs($('#gifSearch').value.trim()); }
+}
+
+if (gifActif()) {
+  $('#btnGif').hidden = false;
+  $('#btnGif').onclick = e => { e.stopPropagation(); ouvrirGif($('#gifPanel').hidden); };
+  /* On attend une pause de frappe : une requête par lettre épuiserait le quota
+     Tenor pour rien. */
+  $('#gifSearch').oninput = () => {
+    clearTimeout(gifMinuteur);
+    gifMinuteur = setTimeout(() => chercherGifs($('#gifSearch').value.trim()), 350);
+  };
+  $('#gifSearch').onkeydown = e => { if (e.key === 'Enter') { clearTimeout(gifMinuteur); chercherGifs($('#gifSearch').value.trim()); } };
+  $('#gifClear').onclick = () => { $('#gifSearch').value = ''; $('#gifSearch').focus(); chercherGifs(''); };
+  document.addEventListener('click', e => {
+    if (!$('#gifPanel').hidden && !e.target.closest('#gifPanel,#btnGif')) ouvrirGif(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#gifPanel').hidden) { ouvrirGif(false); $('#chatInput').focus(); }
+  });
+}
 
 const envoyerMsg = () => {
   const i = $('#chatInput'), t = i.value.trim();

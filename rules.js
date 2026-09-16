@@ -78,6 +78,39 @@ window.UC_RULES = (() => {
       : dits.some(d => d.startsWith(m) || (d.length >= COURT && m.startsWith(d))));
   }
 
+  /* ---- images animées (GIF) -------------------------------------------
+     Laisser un joueur choisir l'adresse d'une image que TOUS les autres vont
+     charger, c'est lui laisser choisir à quel serveur ils se présentent : ce
+     serveur voit alors l'adresse IP de chacun. On n'accepte donc que le CDN de
+     Tenor, en https, et on jette tout le reste — y compris la partie « ? » de
+     l'adresse, qui ne sert à rien ici et pourrait servir de mouchard. */
+
+  const GIF_HOTE = /^media[0-9]*\.tenor\.com$/;
+  const GIF_MAX  = 300;                       // longueur d'adresse raisonnable
+
+  /**
+   * Nettoie une image proposée par un joueur.
+   * Rend un objet sûr { url, w, h, alt }, ou null si l'image est refusée.
+   */
+  function gifValide(g) {
+    if (!g || typeof g !== 'object') return null;
+    const brut = (g.url || '').toString().trim();
+    if (!brut || brut.length > GIF_MAX) return null;
+    let u;
+    try { u = new URL(brut); } catch { return null; }
+    if (u.protocol !== 'https:') return null;
+    if (u.username || u.password) return null;
+    if (!GIF_HOTE.test(u.hostname)) return null;
+    if (!/\.gif$/i.test(u.pathname)) return null;
+    /* On reconstruit l'adresse au lieu de la recopier : ce qui n'est pas
+       explicitement conservé ne peut pas passer. */
+    const url = 'https://' + u.hostname + u.pathname;
+    /* Les dimensions ne servent qu'à réserver la place avant l'arrivée de
+       l'image ; une valeur farfelue ne doit pas pouvoir étirer le chat. */
+    const dim = v => { const n = Math.round(Number(v)); return (n >= 8 && n <= 2000) ? n : 0; };
+    return { url, w: dim(g.w), h: dim(g.h), alt: tronquer(g.alt || 'GIF', 60) || 'GIF' };
+  }
+
   /* ---- configuration ------------------------------------------------- */
 
   /** Message bloquant, ou null si la partie peut démarrer. */
@@ -515,7 +548,8 @@ window.UC_RULES = (() => {
          Un message sans numéro vient d'une sauvegarde antérieure au différentiel :
          il n'a pas de place dans la file, on le joint aux envois complets. */
       chat: (e.chat || []).filter(m => m.n == null ? !chatDepuis : m.n > chatDepuis)
-                          .map(m => ({ name: m.name, text: m.text, ts: m.ts, mine: m.id === id })),
+                          .map(m => ({ name: m.name, text: m.text, gif: m.gif || null,
+                                       ts: m.ts, mine: m.id === id })),
       chatPlein: !chatDepuis,
       /* Compteur monotone : la longueur de la liste ne dit rien, elle est
          plafonnée à 60 et cesse alors de croître. */
@@ -527,7 +561,7 @@ window.UC_RULES = (() => {
   /** La devinette de Mr White est-elle bonne ? */
   const guessOk = (essai, motCivil) => !!norm(essai) && norm(essai) === norm(motCivil);
 
-  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, tronquer, indiceTrahit, cfgError, cfgAdvice,
+  return { MIN_JOUEURS, MAX_JOUEURS, POINTS, PALIERS, ROLE_SECRET, stepCfg, shuffle, norm, tronquer, indiceTrahit, gifValide, cfgError, cfgAdvice,
            appliquerCats,
            poolFor, pickPair, assignRoles, speakOrder, tallyVotes, outcome,
            awardScores, guessOk, projeter,

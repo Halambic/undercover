@@ -221,6 +221,20 @@ function onHostMessage(conn, msg) {
       broadcastViews(); break;
     }
 
+    /* Une image animée suit exactement le chemin d'un message, avec le même
+       garde-fou anti-spam — mais l'adresse est refiltrée ici : ce que le client
+       envoie ne prouve rien, il a pu être trafiqué. */
+    case 'gif': {
+      const g = R.gifValide(msg.gif);
+      if (!g) return;
+      if (!R.peutParler(S, p.id)) return;
+      if (Date.now() - (p.dernierMsg || 0) < 1500) return;
+      p.dernierMsg = Date.now();
+      S.chat.push({ id: p.id, name: p.name, text: '', gif: g, ts: Date.now(), n: ++S.chatSeq });
+      if (S.chat.length > 60) S.chat.shift();
+      broadcastViews(); break;
+    }
+
     case 'openvote':
       if (!isHost || S.phase !== 'debate') return;
       S.phase = 'vote'; S.deadline = null; S.players.forEach(p => p.voted = null); hostNudge(); break;

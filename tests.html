@@ -31,7 +31,7 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:.04em;text-transform:uppercase}
 </main>
 
 <script src="words.js?v=3"></script>
-<script src="rules.js?v=19"></script>
+<script src="rules.js?v=20"></script>
 <script>
 /* ---------- micro-harnais ---------- */
 const R = window.UC_RULES;
@@ -903,6 +903,49 @@ groupe('Étanchéité (aucune fuite de rôle)');
   verifie('les vivants restent couverts', v2[2].role === null, v2);
   const fin = vueDe('a', js, 'end');
   verifie('fin de partie : tout est dévoilé', fin.every(v => v.role !== null), fin);
+}
+
+groupe('Filtre des GIF : seul le CDN de Tenor passe');
+{
+  const bon = R.gifValide({ url: 'https://media.tenor.com/abc123/rire.gif', w: 220, h: 160, alt: 'rire' });
+  verifie('une adresse Tenor est acceptée', bon && bon.url === 'https://media.tenor.com/abc123/rire.gif', bon);
+  verifie('les dimensions sont conservées', bon.w === 220 && bon.h === 160, bon);
+  verifie('media1..media9 aussi', !!R.gifValide({ url: 'https://media1.tenor.com/x/a.gif' }));
+
+  /* ce qu'il faut absolument refuser : chacune de ces adresses révélerait
+     l'IP de tous les joueurs au serveur visé. */
+  const rejete = u => R.gifValide({ url: u }) === null;
+  verifie('un autre domaine', rejete('https://pisteur.example/a.gif'));
+  verifie('un domaine qui imite Tenor', rejete('https://media.tenor.com.evil.net/a.gif'));
+  verifie('un sous-domaine greffé', rejete('https://evil.net/media.tenor.com/a.gif'));
+  verifie('du http en clair', rejete('http://media.tenor.com/a.gif'));
+  verifie('un identifiant glissé dans l\'hôte', rejete('https://media.tenor.com@evil.net/a.gif'));
+  verifie('autre chose qu\'un .gif', rejete('https://media.tenor.com/a.js'));
+  verifie('un .gif déguisé par la requête', rejete('https://media.tenor.com/a.png?x=.gif'));
+  verifie('du javascript:', rejete('javascript:alert(1)'));
+  verifie('une donnée en ligne', rejete('data:image/gif;base64,R0lGOD'));
+  verifie('le vide', rejete('') && R.gifValide(null) === null && R.gifValide('texte') === null);
+  verifie('une adresse démesurée', rejete('https://media.tenor.com/' + 'a'.repeat(400) + '.gif'));
+
+  /* la requête est jetée, pas recopiée */
+  const propre = R.gifValide({ url: 'https://media.tenor.com/abc/a.gif?mouchard=qui-regarde#x' });
+  verifie('la requête est retirée', propre.url === 'https://media.tenor.com/abc/a.gif', propre);
+
+  /* des dimensions absurdes ne doivent pas pouvoir étirer le chat */
+  const fou = R.gifValide({ url: 'https://media.tenor.com/a/b.gif', w: 99999, h: -5 });
+  verifie('une largeur absurde est annulée', fou.w === 0 && fou.h === 0, fou);
+  verifie('une description manquante a un repli', fou.alt === 'GIF', fou.alt);
+  verifie('une description est tronquée',
+          R.gifValide({ url: 'https://media.tenor.com/a/b.gif', alt: 'z'.repeat(200) }).alt.length === 60);
+
+  /* le message traverse la projection */
+  const e = partie(['civil', 'civil', 'under']);
+  e.chatSeq = 1;
+  e.chat = [{ id: 'p1', name: 'A', text: '', gif: bon, ts: 1, n: 1 }];
+  const vue = R.projeter(e, 'p2');
+  verifie('le GIF arrive au destinataire', vue.chat[0].gif.url === bon.url, vue.chat[0]);
+  const sansGif = R.projeter({ ...e, chat: [{ id: 'p1', name: 'A', text: 'coucou', ts: 1, n: 1 }] }, 'p2');
+  verifie('un message texte n\'en invente pas', sansGif.chat[0].gif === null, sansGif.chat[0]);
 }
 
 /* ---------- bilan ---------- */

@@ -496,9 +496,38 @@ occupée par les réglages et les catégories, le centre est presque vide) et
 **à droite pendant la partie**, où il prend toute la hauteur restante. La liste
 se recolle au dernier message, sauf si on est remonté lire l'historique.
 Les joueurs **éliminés passent en lecture seule** : ils suivent la fin de la
-partie sans pouvoir l'influencer. Anti-spam à 700 ms par joueur, messages
+partie sans pouvoir l'influencer. Anti-spam à 700 ms par joueur (1,5 s pour un GIF), messages
 limités à 200 caractères, affichage par `textContent` (aucune injection
 possible). Les 60 derniers messages sont conservés.
+
+### GIF (Tenor)
+
+Un bouton **GIF** à côté de l'emoji ouvre une recherche Tenor. Il n'apparaît
+que si une clé d'API est renseignée dans `config.js` — sans clé, le chat
+fonctionne exactement comme avant, sans bouton mort ni message d'erreur.
+
+**Pourquoi une clé.** Tenor est l'API de Google ; elle refuse les requêtes
+anonymes. La marche à suivre est écrite en tête de `config.js`. Cette clé est
+*publique* : elle se lit dans le code source du site. C'est le fonctionnement
+normal d'une clé Tenor côté navigateur, mais il faut la **restreindre au
+domaine du site** dans la console Google, sinon n'importe qui peut consommer
+ton quota depuis ailleurs.
+
+**Pourquoi un filtre d'adresses.** Laisser un joueur choisir l'adresse d'une
+image que tous les autres vont charger revient à lui laisser choisir à quel
+serveur ils se présentent — ce serveur voit alors l'adresse IP de chacun.
+`R.gifValide()` n'accepte donc que `media*.tenor.com`, en https, chemin en
+`.gif`, et **reconstruit** l'adresse au lieu de la recopier : la partie `?…`
+est jetée. Le filtre tourne **chez l'hôte**, pas dans l'interface : ce que le
+client envoie ne prouve rien, il a pu être trafiqué. Vingt tests couvrent les
+contournements (domaine sosie `media.tenor.com.evil.net`, identifiant glissé
+dans l'hôte `media.tenor.com@evil.net`, `.gif` déguisé en requête,
+`javascript:`, `data:`).
+
+Détails : vignettes `tinygif` (quelques dizaines de Ko, pas le GIF d'origine),
+recherche temporisée à 350 ms (une requête par lettre épuiserait le quota),
+anti-spam à 1,5 s, image bornée à 180×160 px dans le fil, dimensions réservées
+avant l'arrivée de l'image pour que le chat ne saute pas.
 
 ## Minuteurs
 
