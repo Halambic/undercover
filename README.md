@@ -554,8 +554,20 @@ La place de l'image est en revanche bien réservée (largeur ferme +
 qu'elle n'est pas chargée, et sans ça le chat sautait d'un cran à chaque
 arrivée.
 
-Autres détails : recherche temporisée à 350 ms, anti-spam à 1,5 s, image bornée
-à 180×160 px dans le fil.
+**La taille de l'image suit celle du fil.** Le chat n'a pas la même hauteur
+selon l'endroit où il est placé : plein écran à droite pendant la partie, mais
+~130 px au centre dans le salon. Un plafond fixe de 160 px y donnait une image
+plus haute que le panneau, donc rognée. `plafondGif()` s'aligne sur la hauteur
+réellement disponible, avec un plancher de 72 px pour que l'image reste
+regardable — mesuré : 105 px dans le salon, 159 px en partie.
+
+Le panneau du salon est passé de 210 à 250 px de haut au passage. Vérifié que
+ça ne fait pas revenir le bug du bouton « Lancer la partie » masqué : à 5
+joueurs dans une fenêtre de 720 px, le bouton reste dans la scène et
+`elementFromPoint` renvoie bien le bouton lui-même (rien n'est peint dessus).
+
+Autres détails : recherche temporisée à 350 ms, anti-spam à 1,5 s, largeur
+bornée à 180 px dans le fil.
 
 ## Minuteurs
 

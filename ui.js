@@ -896,6 +896,17 @@ function envoyerGif(g) {
    et coûtait une panne visible. */
 const GIF_L = 180, GIF_H = 160;               // bornes d'affichage dans le fil
 
+/* Le fil n'a pas la même hauteur selon l'endroit où il est placé : plein écran
+   à droite pendant la partie, mais ~90 px au centre dans le salon. Un plafond
+   fixe de 160 px y donnait une image plus haute que le panneau, donc rognée.
+   On s'aligne donc sur la hauteur réellement disponible, avec un plancher pour
+   que l'image reste regardable. */
+function plafondGif() {
+  const h = $('#chatList').clientHeight;
+  if (!h) return GIF_H;                       // premier rendu : pas encore de mise en page
+  return Math.max(72, Math.min(GIF_H, h - 24));
+}
+
 function imageChat(g) {
   const a = el('a', 'gifmsg');
   a.href = g.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
@@ -903,7 +914,8 @@ function imageChat(g) {
   i.alt = g.alt || 'GIF';
   if (g.w && g.h) {
     /* largeur telle que la hauteur reste sous la borne */
-    const l = Math.round(Math.min(GIF_L, g.w, g.w * GIF_H / g.h));
+    const max = plafondGif();
+    const l = Math.round(Math.min(GIF_L, g.w, g.w * max / g.h));
     i.style.width = l + 'px';
     i.style.aspectRatio = g.w + ' / ' + g.h;
   }
